@@ -4,6 +4,14 @@ Flutter mobile app to create, save & edit grocery lists easily — a high-fideli
 
 Two tabs, swipeable left↔right: **Listes** (your shopping lists) and **Recettes** (a reusable recipe library). Recipes drop into a list as a "folder" whose quantities scale live with the number of servings; loose items live in an *En vrac* section. Everything persists locally.
 
+## Screenshots
+
+<p align="center">
+  <img src="preview1.png" alt="Listeo — écran des listes" width="270" />
+  &nbsp;&nbsp;
+  <img src="preview2.png" alt="Listeo — détail d'une liste" width="270" />
+</p>
+
 ## Getting started
 
 This repo contains the Dart source (`lib/`), `pubspec.yaml`, and analysis config. The platform runner folders (`android/`, `ios/`, …) are not committed, so generate them once:

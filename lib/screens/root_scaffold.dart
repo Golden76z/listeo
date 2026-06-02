@@ -4,6 +4,7 @@ import '../theme/icons.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/primitives.dart';
+import '../widgets/sheets.dart';
 import 'home_screen.dart';
 import 'recipes_screen.dart';
 
@@ -55,7 +56,41 @@ class _RootScaffoldState extends State<RootScaffold> {
           children: const [HomeScreen(), RecipesScreen()],
         ),
       ),
+      // Lives in the Scaffold slot so it's always positioned above the bottom
+      // nav bar; fades + scales out as the user swipes toward the recipes tab.
+      floatingActionButton: _buildFab(),
       bottomNavigationBar: _BottomNav(page: _page, tabs: _tabs, onTap: _goTo),
+    );
+  }
+
+  Widget _buildFab() {
+    final t = (1 - _page).clamp(0.0, 1.0); // 1 on Listes, 0 on Recettes
+    return IgnorePointer(
+      ignoring: t < 0.5,
+      child: Opacity(
+        opacity: t,
+        child: Transform.scale(
+          scale: 0.8 + 0.2 * t,
+          child: Pressable(
+            scale: 0.94,
+            onTap: () => openCreateList(context),
+            child: Container(
+              height: 56,
+              padding: const EdgeInsets.only(left: 18, right: 22),
+              decoration: BoxDecoration(
+                color: LoTheme.primary,
+                borderRadius: BorderRadius.circular(99),
+                boxShadow: [BoxShadow(color: LoTheme.primaryShadow, blurRadius: 22, offset: const Offset(0, 8))],
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(AppIcons.plus, size: 22, color: Colors.white),
+                const SizedBox(width: 8),
+                Text('nouvelle liste', style: LoTheme.font(size: 16, weight: FontWeight.w700, color: Colors.white)),
+              ]),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

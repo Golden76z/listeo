@@ -19,57 +19,33 @@ class HomeScreen extends StatelessWidget {
     final store = context.watch<AppStore>();
     final lists = store.lists;
 
-    return Stack(children: [
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // brand + header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Center(
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                _BrandMark(),
-                const SizedBox(width: 12),
-                Text('Listeo', style: LoTheme.font(size: 30, weight: FontWeight.w700, letterSpacing: -0.6, height: 1)),
-              ]),
-            ),
-            const SizedBox(height: 22),
-            Text('mes listes', style: LoTheme.font(size: 32, weight: FontWeight.w700, letterSpacing: -0.6)),
-            const SizedBox(height: 4),
-            Text("${lists.length} listes · garde une longueur d'avance",
-                style: LoTheme.font(size: 14, weight: FontWeight.w500, color: LoTheme.ink3)),
-          ]),
-        ),
-        Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 130),
-            physics: const BouncingScrollPhysics(),
-            itemCount: lists.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 13),
-            itemBuilder: (c, i) => FadeSlideIn(index: i, child: _ListCard(list: lists[i])),
-          ),
-        ),
-      ]),
-      // FAB
-      Positioned(
-        right: 18,
-        bottom: 26,
-        child: Pressable(
-          scale: 0.94,
-          onTap: () => openCreateList(context),
-          child: Container(
-            height: 56,
-            padding: const EdgeInsets.only(left: 18, right: 22),
-            decoration: BoxDecoration(
-              color: LoTheme.primary,
-              borderRadius: BorderRadius.circular(99),
-              boxShadow: [BoxShadow(color: LoTheme.primaryShadow, blurRadius: 22, offset: const Offset(0, 8))],
-            ),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // brand + header
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(AppIcons.plus, size: 22, color: Colors.white),
-              const SizedBox(width: 8),
-              Text('nouvelle liste', style: LoTheme.font(size: 16, weight: FontWeight.w700, color: Colors.white)),
+              _BrandMark(),
+              const SizedBox(width: 12),
+              Text('Listeo', style: LoTheme.font(size: 30, weight: FontWeight.w700, letterSpacing: -0.6, height: 1)),
             ]),
           ),
+          const SizedBox(height: 22),
+          Text('mes listes', style: LoTheme.font(size: 32, weight: FontWeight.w700, letterSpacing: -0.6)),
+          const SizedBox(height: 4),
+          Text("${lists.length} listes · garde une longueur d'avance",
+              style: LoTheme.font(size: 14, weight: FontWeight.w500, color: LoTheme.ink3)),
+        ]),
+      ),
+      Expanded(
+        child: ListView.separated(
+          // bottom room so the last card clears the floating "nouvelle liste" button
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 96),
+          physics: const BouncingScrollPhysics(),
+          itemCount: lists.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 13),
+          itemBuilder: (c, i) => FadeSlideIn(index: i, child: _ListCard(list: lists[i])),
         ),
       ),
     ]);
@@ -80,14 +56,14 @@ class _BrandMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 30,
-      height: 30,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
-        color: LoTheme.primary,
         borderRadius: BorderRadius.circular(10),
         boxShadow: LoTheme.cardShadow,
       ),
-      child: const Icon(AppIcons.check, size: 18, color: Colors.white),
+      clipBehavior: Clip.antiAlias,
+      child: Image.asset('assets/icon/listeo.png', fit: BoxFit.cover),
     );
   }
 }

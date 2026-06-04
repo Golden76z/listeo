@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../data/store.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+import '../l10n/l10n.dart';
 import '../widgets/animations.dart';
 import '../widgets/primitives.dart';
 import '../widgets/sheets.dart';
@@ -19,6 +20,7 @@ class RecipesScreen extends StatefulWidget {
 class _RecipesScreenState extends State<RecipesScreen> {
   final _search = TextEditingController();
   String _q = '';
+  String _activeTag = 'all';
 
   @override
   void initState() {
@@ -32,40 +34,67 @@ class _RecipesScreenState extends State<RecipesScreen> {
     super.dispose();
   }
 
+  bool _matchesTag(Recipe r, String tagId) {
+    if (tagId == 'all') return true;
+    final nameLower = r.name.toLowerCase();
+    bool hasIngredient(String kw) => r.items.any((it) => it.name.toLowerCase().contains(kw.toLowerCase()));
+    bool hasName(String kw) => nameLower.contains(kw.toLowerCase());
+    bool match(String kw) => hasName(kw) || hasIngredient(kw);
+
+    switch (tagId) {
+      case 'pates':
+        return match('pât') || match('past') || match('spag') || match('noodle');
+      case 'poulet':
+        return match('poulet') || match('chicken');
+      case 'beef':
+        return match('bœuf') || match('boeuf') || match('beef') || match('taco');
+      case 'legumes':
+        final keywords = ['légume', 'veg', 'oignon', 'onion', 'tomate', 'tomato', 'salade', 'salad', 'carotte', 'carrot', 'courgette', 'zucchini', 'ail', 'garlic', 'avocat', 'avocado', 'concombre', 'cucumber', 'pomme de terre', 'potato', 'épinard', 'spinach'];
+        return keywords.any((kw) => match(kw));
+      case 'dessert':
+        return match('sucre') || match('sugar') || match('chocolat') || match('chocolate') || match('gâteau') || match('cake') || match('pancake') || match('dessert');
+      default:
+        return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
-    final filtered = store.recipes.where((r) => r.name.toLowerCase().contains(_q.toLowerCase())).toList();
+    final filterTags = [
+      (id: 'all', label: context.t('filter.all')),
+      (id: 'pates', label: context.t('filter.pasta')),
+      (id: 'poulet', label: context.t('filter.chicken')),
+      (id: 'beef', label: context.t('filter.beef')),
+      (id: 'legumes', label: context.t('filter.vegetables')),
+      (id: 'dessert', label: context.t('filter.dessert')),
+    ];
+
+    final filtered = store.recipes.where((r) {
+      final matchesQuery = r.name.toLowerCase().contains(_q.toLowerCase());
+      if (!matchesQuery) return false;
+      return _matchesTag(r, _activeTag);
+    }).toList();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 8),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('mes recettes', style: LoTheme.font(size: 30, weight: FontWeight.w700, letterSpacing: -0.6)),
-            Pressable(
-              scale: 0.9,
-              onTap: () => openRecipeEditor(context),
-              child: Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: LoTheme.primary,
-                  shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: LoTheme.primaryShadow, blurRadius: 14, offset: const Offset(0, 4))],
-                ),
-                child: const Icon(AppIcons.plus, size: 22, color: Colors.white),
-              ),
-            ),
-          ]),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(context.t('title.recipes'), style: LoTheme.font(size: 30, weight: FontWeight.w700, letterSpacing: -0.6)),
+              const LanguageToggle(),
+            ],
+          ),
           const SizedBox(height: 4),
-          Text('${store.recipes.length} recettes enregistrées · réutilise-les en un geste',
+          Text('${store.recipes.length} ${context.t('subtitle.recipes')}',
               style: LoTheme.font(size: 14, weight: FontWeight.w500, color: LoTheme.ink3)),
           const SizedBox(height: 14),
           Container(
             height: 44,
             padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(color: LoTheme.surface2, borderRadius: BorderRadius.circular(99)),
+            decoration: BoxDecoration(color: LoTheme.surface2, borderRadius: BorderRadius.circular(LoTheme.r(0.9))),
             child: Row(children: [
               const Icon(AppIcons.search, size: 18, color: LoTheme.ink3),
               const SizedBox(width: 10),
@@ -77,12 +106,44 @@ class _RecipesScreenState extends State<RecipesScreen> {
                   decoration: InputDecoration(
                     isCollapsed: true,
                     border: InputBorder.none,
-                    hintText: 'rechercher une recette',
+                    hintText: context.t('search.recipes'),
                     hintStyle: LoTheme.font(size: 15, weight: FontWeight.w600, color: LoTheme.ink3),
                   ),
                 ),
               ),
             ]),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 32,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: filterTags.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (c, idx) {
+                final tag = filterTags[idx];
+                final active = _activeTag == tag.id;
+                return Pressable(
+                  scale: 0.94,
+                  onTap: () => setState(() => _activeTag = tag.id),
+                  child: AnimatedContainer(
+                    duration: LoTheme.fast,
+                    curve: LoTheme.ease,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: active ? LoTheme.primary : LoTheme.surface2,
+                      borderRadius: BorderRadius.circular(LoTheme.r(0.8)),
+                    ),
+                    child: Text(
+                      tag.label,
+                      style: LoTheme.font(size: 13, weight: FontWeight.w700, color: active ? Colors.white : LoTheme.ink2),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ]),
       ),
@@ -92,7 +153,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(AppIcons.book, size: 34, color: LoTheme.lineStrong),
                   const SizedBox(height: 12),
-                  Text('Aucune recette pour « $_q »', style: LoTheme.font(size: 15, weight: FontWeight.w600, color: LoTheme.ink3)),
+                  Text('${context.t('search.no_recipes')} « $_q »', style: LoTheme.font(size: 15, weight: FontWeight.w600, color: LoTheme.ink3)),
                 ]),
               )
             : ListView.separated(
@@ -137,12 +198,12 @@ class _RecipeCard extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(recipe.name, style: LoTheme.font(size: 16.5, weight: FontWeight.w700)),
               const SizedBox(height: 2),
-              Text('${recipe.items.length} ingrédients · ${recipe.servings} pers.',
+              Text('${recipe.items.length} ${context.t('recipe.ingredients')} · ${recipe.servings} ${context.t('recipe.servings')}',
                   style: LoTheme.font(size: 13, weight: FontWeight.w600, color: LoTheme.ink3)),
             ]),
           ),
           LoButton(
-            label: 'liste',
+            label: context.t('btn.add_item'),
             variant: BtnVariant.soft,
             icon: AppIcons.plus,
             small: true,

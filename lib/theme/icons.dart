@@ -24,4 +24,8 @@ abstract class AppIcons {
   static const IconData sparkles = Icons.auto_awesome_rounded;
   static const IconData copy = Icons.copy_rounded;
   static const IconData list = Icons.format_list_bulleted_rounded;
+  static const IconData share = Icons.share_rounded;
+  static const IconData uncheck = Icons.remove_done_rounded;
+  static const IconData deleteChecked = Icons.cleaning_services_rounded;
+  static const IconData store = Icons.store_rounded;
 }

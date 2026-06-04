@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../theme/icons.dart';
 
 /// Lightweight overlay toast that slides up from the bottom, matching the
 /// prototype's `lo-toast` animation.
@@ -65,15 +66,41 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
             child: SlideTransition(
               position: Tween(begin: const Offset(0, 0.5), end: Offset.zero)
                   .animate(CurvedAnimation(parent: _c, curve: LoTheme.ease)),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
-                decoration: BoxDecoration(
-                  color: LoTheme.ink,
-                  borderRadius: BorderRadius.circular(99),
-                  boxShadow: const [BoxShadow(color: Color(0x47282E20), blurRadius: 24, offset: Offset(0, 8))],
+              child: Material(
+                type: MaterialType.transparency,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: LoTheme.ink,
+                    borderRadius: BorderRadius.circular(LoTheme.radius),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x331E3A27),
+                        blurRadius: 18,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        AppIcons.check,
+                        size: 15,
+                        color: Color(0xFF6ED097),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.message,
+                        style: LoTheme.font(
+                          size: 14,
+                          weight: FontWeight.w700,
+                          color: LoTheme.bg,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Text(widget.message,
-                    style: LoTheme.font(size: 14, weight: FontWeight.w600, color: LoTheme.bg)),
               ),
             ),
           ),

@@ -1,14 +1,17 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/icons.dart';
 
 import '../theme/app_theme.dart';
+import '../l10n/l10n.dart';
 import '../widgets/primitives.dart';
 import '../widgets/sheets.dart';
 import 'home_screen.dart';
+import 'explore_screen.dart';
 import 'recipes_screen.dart';
 
-/// Root shell: two tabs (Listes / Recettes) swipeable left↔right via PageView,
+/// Root shell: three tabs (Listes / Découvrir / Recettes) swipeable left↔right via PageView,
 /// with a frosted bottom nav whose indicator + icon colors track the swipe.
 class RootScaffold extends StatefulWidget {
   const RootScaffold({super.key});
@@ -18,12 +21,7 @@ class RootScaffold extends StatefulWidget {
 
 class _RootScaffoldState extends State<RootScaffold> {
   final _controller = PageController();
-  double _page = 0; // continuous page offset (0..1) for indicator interpolation
-
-  static const _tabs = [
-    (icon: AppIcons.list, label: 'listes'),
-    (icon: AppIcons.book, label: 'recettes'),
-  ];
+  double _page = 0; // continuous page offset (0..2) for indicator interpolation
 
   @override
   void initState() {
@@ -45,50 +43,70 @@ class _RootScaffoldState extends State<RootScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: LoTheme.bg,
-      extendBody: true,
-      body: SafeArea(
-        bottom: false,
-        child: PageView(
-          controller: _controller,
-          physics: const BouncingScrollPhysics(),
-          children: const [HomeScreen(), RecipesScreen()],
-        ),
+    final tabs = [
+      (icon: AppIcons.list, label: context.t('tab.lists')),
+      (icon: AppIcons.utensils, label: context.t('tab.discover')),
+      (icon: AppIcons.book, label: context.t('tab.recipes')),
+    ];
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Color(0xFFFFFFFF),
+        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
-      // Lives in the Scaffold slot so it's always positioned above the bottom
-      // nav bar; fades + scales out as the user swipes toward the recipes tab.
-      floatingActionButton: _buildFab(),
-      bottomNavigationBar: _BottomNav(page: _page, tabs: _tabs, onTap: _goTo),
+      child: Scaffold(
+        backgroundColor: LoTheme.bg,
+        extendBody: true,
+        body: SafeArea(
+          bottom: false,
+          child: PageView(
+            controller: _controller,
+            physics: const BouncingScrollPhysics(),
+            children: const [HomeScreen(), ExploreScreen(), RecipesScreen()],
+          ),
+        ),
+        // Lives in the Scaffold slot so it's always positioned above the bottom
+        // nav bar; shows on lists/recipes tabs and hides on the discover tab.
+        floatingActionButton: _buildFab(),
+        bottomNavigationBar: _BottomNav(page: _page, tabs: tabs, onTap: _goTo),
+      ),
     );
   }
 
-  Widget _buildFab() {
-    final t = (1 - _page).clamp(0.0, 1.0); // 1 on Listes, 0 on Recettes
-    return IgnorePointer(
-      ignoring: t < 0.5,
-      child: Opacity(
-        opacity: t,
-        child: Transform.scale(
-          scale: 0.8 + 0.2 * t,
-          child: Pressable(
-            scale: 0.94,
-            onTap: () => openCreateList(context),
-            child: Container(
-              height: 56,
-              padding: const EdgeInsets.only(left: 18, right: 22),
-              decoration: BoxDecoration(
-                color: LoTheme.primary,
-                borderRadius: BorderRadius.circular(99),
-                boxShadow: [BoxShadow(color: LoTheme.primaryShadow, blurRadius: 22, offset: const Offset(0, 8))],
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(AppIcons.plus, size: 22, color: Colors.white),
-                const SizedBox(width: 8),
-                Text('nouvelle liste', style: LoTheme.font(size: 16, weight: FontWeight.w700, color: Colors.white)),
-              ]),
+  Widget? _buildFab() {
+    if (_page > 0.5 && _page < 1.5) {
+      return null; // hide on discover tab
+    }
+    final isRecipes = _page >= 1.5;
+    final label = isRecipes ? context.t('fab.new_recipe') : context.t('fab.new_list');
+    final onTap = isRecipes ? () => openRecipeEditor(context) : () => openCreateList(context);
+
+    return Pressable(
+      scale: 0.94,
+      onTap: onTap,
+      child: Container(
+        height: 56,
+        padding: const EdgeInsets.only(left: 18, right: 22),
+        decoration: BoxDecoration(
+          color: LoTheme.primary,
+          borderRadius: BorderRadius.circular(LoTheme.radius),
+          boxShadow: [BoxShadow(color: LoTheme.primaryShadow, blurRadius: 22, offset: const Offset(0, 8))],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Icon(AppIcons.plus, size: 22, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: LoTheme.font(size: 16, weight: FontWeight.w700, color: Colors.white),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -114,26 +132,31 @@ class _BottomNav extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
           decoration: BoxDecoration(
-            color: LoTheme.surface.withOpacity(0.88),
+            color: LoTheme.surface.withValues(alpha: 0.88),
             border: const Border(top: BorderSide(color: LoTheme.line)),
           ),
           padding: EdgeInsets.only(top: 10, bottom: bottomPad > 0 ? bottomPad : 14),
           child: Stack(children: [
             // sliding indicator
-            LayoutBuilder(builder: (c, cons) {
-              final tabW = cons.maxWidth / tabs.length;
-              const indW = 28.0;
-              final left = tabW * page + (tabW - indW) / 2;
-              return Positioned(
-                top: 0,
-                left: left,
-                child: Container(
-                  width: indW,
-                  height: 3,
-                  decoration: BoxDecoration(color: LoTheme.primary, borderRadius: BorderRadius.circular(99)),
-                ),
-              );
-            }),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LayoutBuilder(builder: (c, cons) {
+                final tabW = cons.maxWidth / tabs.length;
+                const indW = 28.0;
+                final left = (tabW * page + (tabW - indW) / 2).clamp(0.0, double.infinity);
+                return Align(
+                  alignment: Alignment.topLeft,
+                  child: Container(
+                    margin: EdgeInsets.only(left: left),
+                    width: indW,
+                    height: 3,
+                    decoration: BoxDecoration(color: LoTheme.primary, borderRadius: BorderRadius.circular(99)),
+                  ),
+                );
+              }),
+            ),
             Row(
               children: [
                 for (var i = 0; i < tabs.length; i++)
@@ -158,5 +181,4 @@ class _BottomNav extends StatelessWidget {
       ),
     );
   }
-
 }

@@ -1,6 +1,6 @@
-/// Core data models for Listeo: Item, Block (recipe folder / loose section),
-/// ShoppingList, Recipe. All are mutable plain objects with JSON (de)serialization
-/// to mirror the prototype's localStorage shape.
+// Core data models for Listeo: Item, Block (recipe folder / loose section),
+// ShoppingList, Recipe. All are mutable plain objects with JSON (de)serialization
+// to mirror the prototype's localStorage shape.
 
 import 'dart:math';
 import 'unit.dart';
@@ -163,6 +163,7 @@ class Recipe {
   int servings;
   String tone;
   List<Item> items;
+  List<String> instructions;
 
   Recipe({
     required this.id,
@@ -170,6 +171,7 @@ class Recipe {
     required this.servings,
     required this.tone,
     required this.items,
+    this.instructions = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -178,6 +180,7 @@ class Recipe {
         'servings': servings,
         'tone': tone,
         'items': items.map((i) => i.toJson()).toList(),
+        'instructions': instructions,
       };
 
   factory Recipe.fromJson(Map<String, dynamic> j) => Recipe(
@@ -188,6 +191,7 @@ class Recipe {
         items: (j['items'] as List)
             .map((e) => Item.fromJson(e as Map<String, dynamic>))
             .toList(),
+        instructions: (j['instructions'] as List?)?.map((e) => e as String).toList() ?? const [],
       );
 }
 
@@ -244,6 +248,7 @@ Recipe blockToRecipe(Block block) => Recipe(
       items: block.items
           .map((it) => Item(id: uid(), name: it.name, qty: it.qty, unit: it.unit))
           .toList(),
+      instructions: const [],
     );
 
 // ── progress + time ──────────────────────────────────────────

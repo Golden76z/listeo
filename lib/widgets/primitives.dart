@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/icons.dart';
 
+import 'package:provider/provider.dart';
+import '../data/store.dart';
 import '../models/unit.dart';
 import '../theme/app_theme.dart';
 
@@ -60,8 +62,8 @@ class LoCheckbox extends StatelessWidget {
         ),
         child: AnimatedScale(
           scale: checked ? 1 : 0,
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.elasticOut,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutBack,
           child: const Icon(AppIcons.check, size: 15, color: Colors.white),
         ),
       ),
@@ -377,7 +379,7 @@ class UnitChips extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: active ? LoTheme.primary : LoTheme.surface2,
-                borderRadius: BorderRadius.circular(99),
+                borderRadius: BorderRadius.circular(LoTheme.r(0.8)),
               ),
               child: Text(u.label,
                   style: LoTheme.font(size: 13, weight: FontWeight.w700, color: active ? Colors.white : LoTheme.ink2)),
@@ -399,4 +401,37 @@ Widget sheetLabel(String text, {Widget? trailing}) {
       if (trailing != null) trailing,
     ]),
   );
+}
+
+/// A premium capsule language switcher (FR / EN).
+class LanguageToggle extends StatelessWidget {
+  const LanguageToggle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final isFr = store.locale == 'fr';
+    return Pressable(
+      scale: 0.9,
+      onTap: store.toggleLocale,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: LoTheme.surface2,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: LoTheme.line),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('FR', style: LoTheme.font(size: 11.5, weight: isFr ? FontWeight.w800 : FontWeight.w600, color: isFr ? LoTheme.primary : LoTheme.ink3)),
+            const SizedBox(width: 4),
+            Text('·', style: LoTheme.font(size: 11.5, color: LoTheme.ink3)),
+            const SizedBox(width: 4),
+            Text('EN', style: LoTheme.font(size: 11.5, weight: !isFr ? FontWeight.w800 : FontWeight.w600, color: !isFr ? LoTheme.primary : LoTheme.ink3)),
+          ],
+        ),
+      ),
+    );
+  }
 }

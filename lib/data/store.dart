@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/models.dart';
-import '../models/unit.dart';
-import '../theme/app_theme.dart';
 import 'seed.dart';
 
 const _storeKey = 'listeo.v1';
@@ -15,10 +13,13 @@ class AppStore extends ChangeNotifier {
   List<ShoppingList> lists = [];
   List<Recipe> recipes = [];
   SharedPreferences? _prefs;
-  int _toneCursor = 0;
+  String locale = 'en';
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    final deviceLang = PlatformDispatcher.instance.locale.languageCode.toLowerCase();
+    final defaultLocale = (deviceLang == 'fr') ? 'fr' : 'en';
+    locale = _prefs?.getString('listeo.locale') ?? defaultLocale;
     final raw = _prefs?.getString(_storeKey);
     if (raw != null) {
       try {
@@ -39,6 +40,7 @@ class AppStore extends ChangeNotifier {
   }
 
   void _persist() {
+    _prefs?.setString('listeo.locale', locale);
     _prefs?.setString(
       _storeKey,
       jsonEncode({
@@ -48,16 +50,16 @@ class AppStore extends ChangeNotifier {
     );
   }
 
+  void toggleLocale() {
+    locale = locale == 'fr' ? 'en' : 'fr';
+    _changed();
+  }
+
   void _changed() {
     notifyListeners();
     _persist();
   }
 
-  String _nextTone() {
-    final t = Tone.newTones[_toneCursor % Tone.newTones.length];
-    _toneCursor++;
-    return t;
-  }
 
   // ── lookups ───────────────────────────────────────────────
   ShoppingList? listById(String id) =>
@@ -139,12 +141,12 @@ class AppStore extends ChangeNotifier {
     _changed();
   }
 
-  void addAdhocDish(String listId, {required String name, required int servings, required List<Item> items, required bool saveLib}) {
+  void addAdhocDish(String listId, {required String name, required int servings, required String tone, required List<Item> items, required bool saveLib}) {
     final recipe = Recipe(
       id: uid('r'),
       name: name.trim(),
       servings: servings,
-      tone: _nextTone(),
+      tone: tone,
       items: items.map((it) => Item(id: uid(), name: it.name, qty: it.qty, unit: it.unit)).toList(),
     );
     final l = listById(listId);
@@ -184,11 +186,10 @@ class AppStore extends ChangeNotifier {
   }
 
   // ── lists ─────────────────────────────────────────────────
-  String createList(String name, List<String> recipeIds) {
+  String createList(String name, List<String> recipeIds, String tone) {
     final id = uid('l');
     final chosen = recipeIds.map(recipeById).whereType<Recipe>().toList();
     final blocks = chosen.map((r) => recipeToBlock(r, r.servings)).toList();
-    final tone = Tone.newTones[lists.length % Tone.newTones.length];
     lists.insert(0, ShoppingList(
       id: id,
       name: name,
@@ -204,6 +205,13 @@ class AppStore extends ChangeNotifier {
     final l = listById(listId);
     if (l == null) return;
     l.name = name;
+    _changed();
+  }
+
+  void changeListTone(String listId, String tone) {
+    final l = listById(listId);
+    if (l == null) return;
+    l.tone = tone;
     _changed();
   }
 
@@ -231,22 +239,48 @@ class AppStore extends ChangeNotifier {
     _changed();
   }
 
+  void clearCheckedItems(String listId) {
+    final l = listById(listId);
+    if (l == null) return;
+    for (final b in l.blocks) {
+      b.items.removeWhere((it) => it.checked);
+    }
+    l.blocks.removeWhere((b) => b.items.isEmpty);
+    _changed();
+  }
+
+  void uncheckAllItems(String listId) {
+    final l = listById(listId);
+    if (l == null) return;
+    for (final b in l.blocks) {
+      for (final it in b.items) {
+        it.checked = false;
+      }
+    }
+    _changed();
+  }
+
   // ── recipes ───────────────────────────────────────────────
-  void saveRecipe({String? existingId, required String name, required int servings, required List<Item> items}) {
+  void saveRecipe({String? id, String? existingId, required String name, required int servings, required String tone, required List<Item> items, List<String>? instructions}) {
     if (existingId != null) {
       final r = recipeById(existingId);
       if (r != null) {
         r.name = name.trim();
         r.servings = servings;
+        r.tone = tone;
         r.items = items.map((it) => Item(id: uid(), name: it.name, qty: it.qty, unit: it.unit)).toList();
+        if (instructions != null) {
+          r.instructions = instructions;
+        }
       }
     } else {
       recipes.insert(0, Recipe(
-        id: uid('r'),
+        id: id ?? uid('r'),
         name: name.trim(),
         servings: servings,
-        tone: _nextTone(),
+        tone: tone,
         items: items.map((it) => Item(id: uid(), name: it.name, qty: it.qty, unit: it.unit)).toList(),
+        instructions: instructions ?? const [],
       ));
     }
     _changed();

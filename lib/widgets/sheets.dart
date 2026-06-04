@@ -491,6 +491,7 @@ class _EditItemBodyState extends State<_EditItemBody> {
   late final _name = TextEditingController(text: widget.item.name);
   late final _qty = TextEditingController(text: numFr(widget.item.qty));
   late String _unit = widget.item.unit;
+  late String _customCategory = widget.item.customCategory ?? getCategoryForProduct(widget.item.name);
   List<String> _suggestions = [];
 
   @override
@@ -526,7 +527,8 @@ class _EditItemBodyState extends State<_EditItemBody> {
     widget.store.updateItem(widget.listId, widget.blockId ?? _findBlockId(), widget.item.id,
         name: _name.text.trim().isEmpty ? widget.item.name : _name.text.trim(),
         qty: double.tryParse(_qty.text.replaceAll(',', '.')) ?? widget.item.qty,
-        unit: _unit);
+        unit: _unit,
+        customCategory: _customCategory);
     Navigator.pop(context);
   }
 
@@ -586,6 +588,9 @@ class _EditItemBodyState extends State<_EditItemBody> {
       ],
       const SizedBox(height: 12),
       UnitChips(value: _unit, onChange: (v) => setState(() => _unit = v)),
+      const SizedBox(height: 14),
+      sheetLabel(context.t('item.editor.aisle')),
+      CategoryChips(value: _customCategory, onChange: (v) => setState(() => _customCategory = v)),
       const SizedBox(height: 18),
       Row(children: [
         LoButton(
@@ -810,10 +815,17 @@ class _RecipeDetailBody extends StatelessWidget {
       Row(children: [
         _toneIcon(tn, 48, 23),
         const SizedBox(width: 13),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(r.name, style: LoTheme.font(size: 20, weight: FontWeight.w700)),
-          Text('${r.items.length} ingrédients · ${r.servings} pers.', style: LoTheme.font(size: 13, weight: FontWeight.w600, color: LoTheme.ink3)),
-        ]),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+              r.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: LoTheme.font(size: 20, weight: FontWeight.w700),
+            ),
+            Text('${r.items.length} ingrédients · ${r.servings} pers.', style: LoTheme.font(size: 13, weight: FontWeight.w600, color: LoTheme.ink3)),
+          ]),
+        ),
       ]),
       sheetLabel('ingrédients'),
       Container(
@@ -1297,4 +1309,203 @@ void shareList(BuildContext context, ShoppingList list) {
   Clipboard.setData(ClipboardData(text: text));
   LoToast.show(context, 'Liste copiée dans le presse-papiers');
 }
+
+class CategoryChips extends StatelessWidget {
+  final String value;
+  final ValueChanged<String> onChange;
+  const CategoryChips({super.key, required this.value, required this.onChange});
+
+  @override
+  Widget build(BuildContext context) {
+    final order = [
+      'Fruits & Légumes',
+      'Produits Laitiers & Œufs',
+      'Boulangerie',
+      'Boucherie & Poissonnerie',
+      'Épicerie',
+      'Boissons',
+      'En vrac',
+    ];
+
+    return SizedBox(
+      height: 34,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: order.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        itemBuilder: (c, i) {
+          final cat = order[i];
+          final active = cat == value;
+          return Pressable(
+            onTap: () => onChange(cat),
+            child: AnimatedContainer(
+              duration: LoTheme.fast,
+              curve: LoTheme.ease,
+              padding: const EdgeInsets.symmetric(horizontal: 13),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: active ? LoTheme.primary : LoTheme.surface2,
+                borderRadius: BorderRadius.circular(LoTheme.r(0.8)),
+              ),
+              child: Text(
+                context.categoryName(cat),
+                style: LoTheme.font(size: 13, weight: FontWeight.w700, color: active ? Colors.white : LoTheme.ink2),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── Select Recipe For Day ────────────────────────────────────
+void openSelectRecipeForDay(BuildContext context, String day) {
+  final store = context.read<AppStore>();
+  showLoSheet(
+    context,
+    title: context.t('planner.sheet.select_title'),
+    builder: (ctx) => _SelectRecipeForDayBody(store: store, day: day),
+  );
+}
+
+class _SelectRecipeForDayBody extends StatelessWidget {
+  final AppStore store;
+  final String day;
+  const _SelectRecipeForDayBody({required this.store, required this.day});
+
+  @override
+  Widget build(BuildContext context) {
+    final recipes = store.recipes;
+    if (recipes.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Text(
+            store.locale == 'fr'
+                ? 'Aucune recette dans votre bibliothèque.'
+                : 'No recipes in your library.',
+            style: LoTheme.font(size: 15, weight: FontWeight.w600, color: LoTheme.ink3),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final r in recipes) ...[
+          _recipeRow(
+            tone: Tone.of(r.tone),
+            title: r.name,
+            subtitle: store.locale == 'fr'
+                ? '${r.items.length} ingrédients · ${r.servings} pers.'
+                : '${r.items.length} ingredients · ${r.servings} serv.',
+            onTap: () {
+              store.planMeal(day, r.id, r.servings);
+              Navigator.pop(context);
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+// ── Generate List From Planner ────────────────────────────────
+void openGenerateListFromPlanner(BuildContext context) {
+  final store = context.read<AppStore>();
+  showLoSheet(
+    context,
+    title: context.t('planner.sheet.generate_title'),
+    builder: (ctx) => _GenerateListFromPlannerBody(store: store),
+  );
+}
+
+class _GenerateListFromPlannerBody extends StatefulWidget {
+  final AppStore store;
+  const _GenerateListFromPlannerBody({required this.store});
+
+  @override
+  State<_GenerateListFromPlannerBody> createState() => _GenerateListFromPlannerBodyState();
+}
+
+class _GenerateListFromPlannerBodyState extends State<_GenerateListFromPlannerBody> {
+  final _name = TextEditingController();
+  late String _tone;
+
+  @override
+  void initState() {
+    super.initState();
+    _tone = Tone.allTones[widget.store.lists.length % Tone.allTones.length];
+    final isFr = widget.store.locale == 'fr';
+    _name.text = isFr ? 'Repas de la semaine' : 'Weekly Meals';
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  void _generate() {
+    final nav = Navigator.of(context);
+    final nm = _name.text.trim().isEmpty 
+        ? (widget.store.locale == 'fr' ? 'Repas de la semaine' : 'Weekly Meals') 
+        : _name.text.trim();
+    final id = widget.store.generateListFromPlanner(nm, _tone);
+    nav.pop();
+    nav.push(listRoute(id));
+    LoToast.show(context, context.t('planner.toast.generated'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFr = widget.store.locale == 'fr';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LoTextField(
+          controller: _name,
+          placeholder: isFr ? 'ex. Repas de la semaine' : 'ex. Weekly Meals',
+          autoFocus: true,
+          onSubmit: _generate,
+        ),
+        const SizedBox(height: 12),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final s in isFr
+              ? ['Repas de la semaine', 'Menu hebdo', 'Semaine complète']
+              : ['Weekly Meals', 'Weekly Menu', 'Full Week'])
+            Pressable(
+              onTap: () => setState(() => _name.text = s),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+                decoration: BoxDecoration(color: LoTheme.surface2, borderRadius: BorderRadius.circular(LoTheme.r(0.8))),
+                child: Text(s, style: LoTheme.font(size: 13, weight: FontWeight.w600, color: LoTheme.ink2)),
+              ),
+            ),
+        ]),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(context.t('planner.sheet.generate_color'), style: LoTheme.font(size: 11, weight: FontWeight.w700, color: LoTheme.ink3, letterSpacing: 0.5)),
+        ),
+        TonePicker(
+          value: _tone,
+          onChange: (v) => setState(() => _tone = v),
+        ),
+        const SizedBox(height: 20),
+        LoButton(
+          label: context.t('planner.sheet.generate_title'),
+          icon: AppIcons.plus,
+          full: true,
+          onTap: _generate,
+        ),
+      ],
+    );
+  }
+}
+
 

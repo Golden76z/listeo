@@ -4,8 +4,27 @@ import '../data/store.dart';
 
 extension LocalizationExtension on BuildContext {
   String t(String key) {
-    final store = watch<AppStore>();
+    final store = read<AppStore>();
     return kTranslations[store.locale]?[key] ?? key;
+  }
+
+  String categoryName(String cat) {
+    switch (cat) {
+      case 'Fruits & Légumes':
+        return t('cat.fruits');
+      case 'Produits Laitiers & Œufs':
+        return t('cat.dairy');
+      case 'Boulangerie':
+        return t('cat.bakery');
+      case 'Boucherie & Poissonnerie':
+        return t('cat.meat');
+      case 'Épicerie':
+        return t('cat.grocery');
+      case 'Boissons':
+        return t('cat.drinks');
+      default:
+        return t('cat.bulk');
+    }
   }
 }
 
@@ -14,12 +33,34 @@ const Map<String, Map<String, String>> kTranslations = {
     'tab.lists': 'listes',
     'tab.discover': 'découvrir',
     'tab.recipes': 'recettes',
+    'tab.planner': 'planning',
     'title.lists': 'mes listes',
     'title.recipes': 'mes recettes',
     'title.discover': 'découvrir',
+    'title.planner': 'mon planning',
     'subtitle.lists': 'listes · garde une longueur d\'avance',
     'subtitle.recipes': 'recettes enregistrées · réutilise-les',
     'subtitle.discover': 'recettes du catalogue · inspire-toi',
+    'subtitle.planner': 'planifie tes repas de la semaine',
+    'day.monday': 'Lundi',
+    'day.tuesday': 'Mardi',
+    'day.wednesday': 'Mercredi',
+    'day.thursday': 'Jeudi',
+    'day.friday': 'Vendredi',
+    'day.saturday': 'Samedi',
+    'day.sunday': 'Dimanche',
+    'planner.empty': 'Aucun repas planifié',
+    'planner.empty_desc': 'Tape sur le « + » d\'un jour pour y ajouter une recette.',
+    'planner.btn.clear': 'vider la semaine',
+    'planner.btn.generate': 'générer la liste',
+    'planner.dialog.clear_title': 'Vider le planning ?',
+    'planner.dialog.clear_desc': 'Tous les repas planifiés seront retirés.',
+    'planner.toast.cleared': 'Planning réinitialisé',
+    'planner.toast.generated': 'Liste de courses générée !',
+    'planner.sheet.select_title': 'choisir une recette',
+    'planner.sheet.generate_title': 'générer la liste',
+    'planner.sheet.generate_name': 'nom de la liste',
+    'planner.sheet.generate_color': 'couleur de la liste',
     'fab.new_list': 'nouvelle liste',
     'fab.new_recipe': 'nouvelle recette',
     'btn.add_item': 'article',
@@ -34,8 +75,10 @@ const Map<String, Map<String, String>> kTranslations = {
     'recipe.steps': 'préparation',
     'btn.add_to_list': 'ajouter à une liste',
     'btn.save_to_recipes': 'sauvegarder dans mes recettes',
+    'btn.remove_from_recipes': 'retirer de mes recettes',
     'toast.added_to_list': 'Recette ajoutée à la liste',
     'toast.saved_to_recipes': 'Ajouté à mes recettes',
+    'toast.recipe_removed': 'Recette retirée de mes recettes',
     'toast.already_saved': 'Déjà dans vos recettes',
     'toast.recipe_modified': 'Recette modifiée',
     'toast.recipe_saved': 'Recette enregistrée',
@@ -113,12 +156,34 @@ const Map<String, Map<String, String>> kTranslations = {
     'tab.lists': 'lists',
     'tab.discover': 'discover',
     'tab.recipes': 'recipes',
+    'tab.planner': 'planner',
     'title.lists': 'my lists',
     'title.recipes': 'my recipes',
     'title.discover': 'explore',
+    'title.planner': 'my planner',
     'subtitle.lists': 'lists · keep a step ahead',
     'subtitle.recipes': 'saved recipes · reuse them',
     'subtitle.discover': 'recipes in catalog · get inspired',
+    'subtitle.planner': 'plan your meals for the week',
+    'day.monday': 'Monday',
+    'day.tuesday': 'Tuesday',
+    'day.wednesday': 'Wednesday',
+    'day.thursday': 'Thursday',
+    'day.friday': 'Friday',
+    'day.saturday': 'Saturday',
+    'day.sunday': 'Sunday',
+    'planner.empty': 'No meals planned',
+    'planner.empty_desc': 'Tap the "+" on any day to schedule a recipe.',
+    'planner.btn.clear': 'clear week',
+    'planner.btn.generate': 'generate list',
+    'planner.dialog.clear_title': 'Clear planner?',
+    'planner.dialog.clear_desc': 'All scheduled meals will be removed.',
+    'planner.toast.cleared': 'Planner cleared',
+    'planner.toast.generated': 'Shopping list generated!',
+    'planner.sheet.select_title': 'select a recipe',
+    'planner.sheet.generate_title': 'generate list',
+    'planner.sheet.generate_name': 'list name',
+    'planner.sheet.generate_color': 'list color',
     'fab.new_list': 'new list',
     'fab.new_recipe': 'new recipe',
     'btn.add_item': 'item',
@@ -133,8 +198,10 @@ const Map<String, Map<String, String>> kTranslations = {
     'recipe.steps': 'instructions',
     'btn.add_to_list': 'add to list',
     'btn.save_to_recipes': 'save to my recipes',
+    'btn.remove_from_recipes': 'remove from my recipes',
     'toast.added_to_list': 'Recipe added to list',
     'toast.saved_to_recipes': 'Added to my recipes',
+    'toast.recipe_removed': 'Recipe removed from my recipes',
     'toast.already_saved': 'Already in your recipes',
     'toast.recipe_modified': 'Recipe updated',
     'toast.recipe_saved': 'Recipe saved',

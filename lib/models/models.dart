@@ -25,6 +25,9 @@ class Item {
   /// Only present on items inside a recipe block — the quantity at baseServings.
   double? baseQty;
 
+  /// Custom category override assigned by the user.
+  String? customCategory;
+
   Item({
     required this.id,
     required this.name,
@@ -32,6 +35,7 @@ class Item {
     required this.unit,
     this.checked = false,
     this.baseQty,
+    this.customCategory,
   });
 
   Item copyWith({
@@ -40,6 +44,7 @@ class Item {
     String? unit,
     bool? checked,
     double? baseQty,
+    String? customCategory,
   }) =>
       Item(
         id: id,
@@ -48,6 +53,7 @@ class Item {
         unit: unit ?? this.unit,
         checked: checked ?? this.checked,
         baseQty: baseQty ?? this.baseQty,
+        customCategory: customCategory ?? this.customCategory,
       );
 
   Map<String, dynamic> toJson() => {
@@ -57,6 +63,7 @@ class Item {
         'unit': unit,
         'checked': checked,
         if (baseQty != null) 'baseQty': baseQty,
+        if (customCategory != null) 'customCategory': customCategory,
       };
 
   factory Item.fromJson(Map<String, dynamic> j) => Item(
@@ -66,6 +73,7 @@ class Item {
         unit: j['unit'] as String,
         checked: j['checked'] as bool? ?? false,
         baseQty: (j['baseQty'] as num?)?.toDouble(),
+        customCategory: j['customCategory'] as String?,
       );
 }
 
@@ -192,6 +200,26 @@ class Recipe {
             .map((e) => Item.fromJson(e as Map<String, dynamic>))
             .toList(),
         instructions: (j['instructions'] as List?)?.map((e) => e as String).toList() ?? const [],
+      );
+}
+
+class MealPlanItem {
+  final String recipeId;
+  final int servings;
+
+  const MealPlanItem({
+    required this.recipeId,
+    required this.servings,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'recipeId': recipeId,
+        'servings': servings,
+      };
+
+  factory MealPlanItem.fromJson(Map<String, dynamic> j) => MealPlanItem(
+        recipeId: j['recipeId'] as String,
+        servings: (j['servings'] as num).toInt(),
       );
 }
 

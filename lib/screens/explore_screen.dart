@@ -457,36 +457,37 @@ class _SaveRecipeButton extends StatelessWidget {
     final alreadySaved = store.recipes.any((r) => r.id == recipe.id || r.name.toLowerCase() == (isFr ? recipe.nameFr : recipe.nameEn).toLowerCase());
 
     return LoButton(
-      label: context.t('btn.save_to_recipes'),
-      variant: BtnVariant.ghost,
-      icon: AppIcons.bookmark,
+      label: alreadySaved 
+          ? context.t('btn.remove_from_recipes')
+          : context.t('btn.save_to_recipes'),
+      variant: alreadySaved ? BtnVariant.soft : BtnVariant.ghost,
+      icon: alreadySaved ? AppIcons.check : AppIcons.bookmark,
       full: true,
-      disabled: alreadySaved,
       onTap: () {
         if (alreadySaved) {
-          LoToast.show(context, context.t('toast.already_saved'));
-          return;
+          final saved = store.recipes.firstWhere((r) => r.id == recipe.id || r.name.toLowerCase() == (isFr ? recipe.nameFr : recipe.nameEn).toLowerCase());
+          store.deleteRecipe(saved.id);
+          LoToast.show(context, context.t('toast.recipe_removed'));
+        } else {
+          final items = recipe.ingredients
+              .map((i) => Item(
+                    id: uid('it'),
+                    name: isFr ? i.nameFr : i.nameEn,
+                    qty: i.qty,
+                    unit: i.unit,
+                  ))
+              .toList();
+          store.saveRecipe(
+            id: recipe.id,
+            existingId: null,
+            name: isFr ? recipe.nameFr : recipe.nameEn,
+            servings: recipe.servings,
+            tone: recipe.tone,
+            items: items,
+            instructions: isFr ? recipe.instructionsFr : recipe.instructionsEn,
+          );
+          LoToast.show(context, context.t('toast.saved_to_recipes'));
         }
-        final items = recipe.ingredients
-            .map((i) => Item(
-                  id: uid('it'),
-                  name: isFr ? i.nameFr : i.nameEn,
-                  qty: i.qty,
-                  unit: i.unit,
-                ))
-            .toList();
-        store.saveRecipe(
-          id: recipe.id,
-          existingId: null,
-          name: isFr ? recipe.nameFr : recipe.nameEn,
-          servings: recipe.servings,
-          tone: recipe.tone,
-          items: items,
-          instructions: isFr ? recipe.instructionsFr : recipe.instructionsEn,
-        );
-
-        LoToast.show(context, context.t('toast.saved_to_recipes'));
-        Navigator.pop(context);
       },
     );
   }

@@ -28,4 +28,5 @@ abstract class AppIcons {
   static const IconData uncheck = Icons.remove_done_rounded;
   static const IconData deleteChecked = Icons.cleaning_services_rounded;
   static const IconData store = Icons.store_rounded;
+  static const IconData calendar = Icons.calendar_today_rounded;
 }

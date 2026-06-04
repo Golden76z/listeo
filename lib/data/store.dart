@@ -15,6 +15,16 @@ class AppStore extends ChangeNotifier {
   SharedPreferences? _prefs;
   String locale = 'en';
 
+  Map<String, List<MealPlanItem>> mealPlan = {
+    'monday': [],
+    'tuesday': [],
+    'wednesday': [],
+    'thursday': [],
+    'friday': [],
+    'saturday': [],
+    'sunday': [],
+  };
+
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     final deviceLang = PlatformDispatcher.instance.locale.languageCode.toLowerCase();
@@ -30,6 +40,15 @@ class AppStore extends ChangeNotifier {
         recipes = (j['recipes'] as List)
             .map((e) => Recipe.fromJson(e as Map<String, dynamic>))
             .toList();
+        final mp = j['mealPlan'] as Map<String, dynamic>?;
+        if (mp != null) {
+          mealPlan = mp.map((key, value) => MapEntry(
+                key,
+                (value as List)
+                    .map((e) => MealPlanItem.fromJson(e as Map<String, dynamic>))
+                    .toList(),
+              ));
+        }
         notifyListeners();
         return;
       } catch (_) {/* fall through to seed */}
@@ -46,6 +65,7 @@ class AppStore extends ChangeNotifier {
       jsonEncode({
         'lists': lists.map((l) => l.toJson()).toList(),
         'recipes': recipes.map((r) => r.toJson()).toList(),
+        'mealPlan': mealPlan.map((k, v) => MapEntry(k, v.map((e) => e.toJson()).toList())),
       }),
     );
   }
@@ -87,7 +107,7 @@ class AppStore extends ChangeNotifier {
   }
 
   void updateItem(String listId, String blockId, String itemId,
-      {String? name, double? qty, String? unit}) {
+      {String? name, double? qty, String? unit, String? customCategory}) {
     final b = _block(listId, blockId);
     final it = b?.items.cast<Item?>().firstWhere((i) => i?.id == itemId, orElse: () => null);
     if (b == null || it == null) return;
@@ -97,6 +117,7 @@ class AppStore extends ChangeNotifier {
       it.qty = qty;
       if (b.isRecipe) it.baseQty = qty * b.baseServings / b.servings;
     }
+    it.customCategory = customCategory;
     _changed();
   }
 
@@ -289,5 +310,63 @@ class AppStore extends ChangeNotifier {
   void deleteRecipe(String id) {
     recipes.removeWhere((r) => r.id == id);
     _changed();
+  }
+
+  // ── meal plan actions ─────────────────────────────────────
+  void planMeal(String day, String recipeId, int servings) {
+    mealPlan.putIfAbsent(day, () => []).add(MealPlanItem(recipeId: recipeId, servings: servings));
+    _changed();
+  }
+
+  void removeMeal(String day, int index) {
+    final list = mealPlan[day];
+    if (list != null && index >= 0 && index < list.length) {
+      list.removeAt(index);
+      _changed();
+    }
+  }
+
+  void updateMealServings(String day, int index, int servings) {
+    final list = mealPlan[day];
+    if (list != null && index >= 0 && index < list.length) {
+      list[index] = MealPlanItem(recipeId: list[index].recipeId, servings: servings);
+      _changed();
+    }
+  }
+
+  void clearMealPlan() {
+    for (final day in mealPlan.keys) {
+      mealPlan[day] = [];
+    }
+    _changed();
+  }
+
+  String generateListFromPlanner(String name, String tone) {
+    final id = uid('l');
+    final List<Block> blocks = [];
+
+    const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    for (final day in dayOrder) {
+      final items = mealPlan[day] ?? [];
+      for (final scheduled in items) {
+        final r = recipeById(scheduled.recipeId);
+        if (r != null) {
+          blocks.add(recipeToBlock(r, scheduled.servings));
+        }
+      }
+    }
+
+    lists.insert(
+      0,
+      ShoppingList(
+        id: id,
+        name: name,
+        tone: tone,
+        createdAt: DateTime.now().millisecondsSinceEpoch,
+        blocks: blocks,
+      ),
+    );
+    _changed();
+    return id;
   }
 }

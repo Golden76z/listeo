@@ -10,6 +10,7 @@ import '../widgets/sheets.dart';
 import 'home_screen.dart';
 import 'explore_screen.dart';
 import 'recipes_screen.dart';
+import 'planner_screen.dart';
 
 /// Root shell: three tabs (Listes / Découvrir / Recettes) swipeable left↔right via PageView,
 /// with a frosted bottom nav whose indicator + icon colors track the swipe.
@@ -47,6 +48,7 @@ class _RootScaffoldState extends State<RootScaffold> {
       (icon: AppIcons.list, label: context.t('tab.lists')),
       (icon: AppIcons.utensils, label: context.t('tab.discover')),
       (icon: AppIcons.book, label: context.t('tab.recipes')),
+      (icon: AppIcons.calendar, label: context.t('tab.planner')),
     ];
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -66,7 +68,7 @@ class _RootScaffoldState extends State<RootScaffold> {
           child: PageView(
             controller: _controller,
             physics: const BouncingScrollPhysics(),
-            children: const [HomeScreen(), ExploreScreen(), RecipesScreen()],
+            children: const [HomeScreen(), ExploreScreen(), RecipesScreen(), PlannerScreen()],
           ),
         ),
         // Lives in the Scaffold slot so it's always positioned above the bottom
@@ -81,7 +83,10 @@ class _RootScaffoldState extends State<RootScaffold> {
     if (_page > 0.5 && _page < 1.5) {
       return null; // hide on discover tab
     }
-    final isRecipes = _page >= 1.5;
+    if (_page >= 2.5) {
+      return null; // hide on planner tab
+    }
+    final isRecipes = _page >= 1.5 && _page < 2.5;
     final label = isRecipes ? context.t('fab.new_recipe') : context.t('fab.new_list');
     final onTap = isRecipes ? () => openRecipeEditor(context) : () => openCreateList(context);
 

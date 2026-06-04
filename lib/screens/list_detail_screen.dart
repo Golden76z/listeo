@@ -11,6 +11,7 @@ import '../widgets/animations.dart';
 import '../widgets/primitives.dart';
 import '../widgets/sheets.dart';
 import '../widgets/toast.dart';
+import '../widgets/confetti.dart';
 
 class ListDetailScreen extends StatefulWidget {
   final String listId;
@@ -23,6 +24,27 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   final _collapsed = <String>{};
   final _servingsOpen = <String>{};
   bool _groupByAisle = false;
+  bool _showConfetti = false;
+  bool? _wasComplete;
+  bool _showSearch = false;
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl.addListener(() {
+      setState(() {
+        _searchQuery = _searchCtrl.text;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   void _toggle(Set<String> s, String id) => setState(() => s.contains(id) ? s.remove(id) : s.add(id));
 
@@ -30,6 +52,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final list = store.listById(widget.listId);
+    final isFr = store.locale == 'fr';
 
     // list deleted out from under us → close.
     if (list == null) {
@@ -42,13 +65,25 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     final prog = listProgress(list);
     final tn = Tone.of(list.tone);
 
+    final isComplete = prog.complete;
+    if (_wasComplete == null) {
+      _wasComplete = isComplete;
+    } else if (isComplete && !_wasComplete! && prog.total > 0) {
+      _wasComplete = true;
+      _showConfetti = true;
+    } else if (!isComplete) {
+      _wasComplete = false;
+    }
+
     final List<Widget> bodyWidgets;
     if (_groupByAisle) {
       final Map<String, List<_GroupedItem>> groups = {};
       for (final b in list.blocks) {
         for (final it in b.items) {
-          final cat = getCategoryForProduct(it.name);
-          groups.putIfAbsent(cat, () => []).add(_GroupedItem(b, it));
+          if (_searchQuery.isEmpty || it.name.toLowerCase().contains(_searchQuery.toLowerCase())) {
+            final cat = it.customCategory ?? getCategoryForProduct(it.name);
+            groups.putIfAbsent(cat, () => []).add(_GroupedItem(b, it));
+          }
         }
       }
 
@@ -120,90 +155,180 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
               servingsOpen: _servingsOpen.contains(b.id),
               onToggleCollapse: () => _toggle(_collapsed, b.id),
               onToggleServings: () => _toggle(_servingsOpen, b.id),
+              searchQuery: _searchQuery,
             )
           else
-            _LooseBlock(key: ValueKey(b.id), list: list, block: b),
+            _LooseBlock(
+              key: ValueKey(b.id),
+              list: list,
+              block: b,
+              searchQuery: _searchQuery,
+            ),
       ];
     }
 
     return Scaffold(
       backgroundColor: LoTheme.bg,
-      body: Column(children: [
-        // header
-        Container(
-          decoration: const BoxDecoration(
-            color: LoTheme.bg,
-            border: Border(bottom: BorderSide(color: LoTheme.line)),
-          ),
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 16, 12),
-              child: Column(children: [
-                Row(children: [
-                  Pressable(
-                    scale: 0.85,
-                    onTap: () => Navigator.pop(context),
-                    child: const SizedBox(width: 38, height: 38, child: Icon(AppIcons.chevronLeft, size: 24, color: LoTheme.ink)),
-                  ),
-                  Expanded(
-                    child: Text(list.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: LoTheme.font(size: 22, weight: FontWeight.w700, letterSpacing: -0.2)),
-                  ),
-                  Pressable(
-                    scale: 0.85,
-                    onTap: () => setState(() => _groupByAisle = !_groupByAisle),
-                    child: AnimatedContainer(
-                      duration: LoTheme.fast,
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: _groupByAisle ? LoTheme.primarySoft : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        AppIcons.store,
-                        size: 20,
-                        color: _groupByAisle ? LoTheme.primaryPress : LoTheme.ink,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Pressable(
-                    scale: 0.85,
-                    onTap: () => openListMenu(context, list),
-                    child: const SizedBox(width: 38, height: 38, child: Icon(AppIcons.moreVertical, size: 20, color: LoTheme.ink)),
-                  ),
-                ]),
-                const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Row(children: [
-                    Expanded(child: ProgressBar(value: prog.pct, color: LoTheme.primary, height: 7)),
-                    const SizedBox(width: 10),
-                    Text(
-                      prog.total == 0 ? context.t('list.status.empty') : (prog.complete ? context.t('list.status.complete') : '${prog.done} / ${prog.total}'),
-                      style: LoTheme.font(size: 13, weight: FontWeight.w700, color: prog.complete ? LoTheme.primaryPress : LoTheme.ink3),
+      body: Stack(
+        children: [
+          Column(children: [
+            // header
+            Container(
+              decoration: const BoxDecoration(
+                color: LoTheme.bg,
+                border: Border(bottom: BorderSide(color: LoTheme.line)),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 16, 12),
+                  child: Column(children: [
+                    if (_showSearch)
+                      Row(children: [
+                        Pressable(
+                          scale: 0.85,
+                          onTap: () => setState(() {
+                            _showSearch = false;
+                            _searchCtrl.clear();
+                            _searchQuery = '';
+                          }),
+                          child: const SizedBox(width: 38, height: 38, child: Icon(AppIcons.chevronLeft, size: 24, color: LoTheme.ink)),
+                        ),
+                        Expanded(
+                          child: Container(
+                            height: 38,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: LoTheme.surface2,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(children: [
+                              const Icon(AppIcons.search, size: 16, color: LoTheme.ink3),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextField(
+                                  controller: _searchCtrl,
+                                  autofocus: true,
+                                  cursorColor: LoTheme.primary,
+                                  style: LoTheme.font(size: 15, weight: FontWeight.w600),
+                                  decoration: InputDecoration(
+                                    isCollapsed: true,
+                                    border: InputBorder.none,
+                                    hintText: isFr ? 'Rechercher...' : 'Search...',
+                                    hintStyle: LoTheme.font(size: 15, weight: FontWeight.w600, color: LoTheme.ink3),
+                                  ),
+                                ),
+                              ),
+                              if (_searchQuery.isNotEmpty)
+                                GestureDetector(
+                                  onTap: () => _searchCtrl.clear(),
+                                  child: const Icon(AppIcons.x, size: 16, color: LoTheme.ink2),
+                                ),
+                            ]),
+                          ),
+                        ),
+                      ])
+                    else
+                      Row(children: [
+                        Pressable(
+                          scale: 0.85,
+                          onTap: () => Navigator.pop(context),
+                          child: const SizedBox(width: 38, height: 38, child: Icon(AppIcons.chevronLeft, size: 24, color: LoTheme.ink)),
+                        ),
+                        Expanded(
+                          child: Text(list.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: LoTheme.font(size: 22, weight: FontWeight.w700, letterSpacing: -0.2)),
+                        ),
+                        Pressable(
+                          scale: 0.85,
+                          onTap: () => setState(() => _showSearch = true),
+                          child: const SizedBox(
+                            width: 38,
+                            height: 38,
+                            child: Icon(AppIcons.search, size: 20, color: LoTheme.ink),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Pressable(
+                          scale: 0.85,
+                          onTap: () => setState(() => _groupByAisle = !_groupByAisle),
+                          child: AnimatedContainer(
+                            duration: LoTheme.fast,
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: _groupByAisle ? LoTheme.primarySoft : Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(
+                              AppIcons.store,
+                              size: 20,
+                              color: _groupByAisle ? LoTheme.primaryPress : LoTheme.ink,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Pressable(
+                          scale: 0.85,
+                          onTap: () => openListMenu(context, list),
+                          child: const SizedBox(width: 38, height: 38, child: Icon(AppIcons.moreVertical, size: 20, color: LoTheme.ink)),
+                        ),
+                      ]),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Row(children: [
+                        Expanded(child: ProgressBar(value: prog.pct, color: LoTheme.primary, height: 7)),
+                        const SizedBox(width: 10),
+                        Text(
+                          prog.total == 0 ? context.t('list.status.empty') : (prog.complete ? context.t('list.status.complete') : '${prog.done} / ${prog.total}'),
+                          style: LoTheme.font(size: 13, weight: FontWeight.w700, color: prog.complete ? LoTheme.primaryPress : LoTheme.ink3),
+                        ),
+                      ]),
                     ),
                   ]),
                 ),
-              ]),
+              ),
             ),
-          ),
-        ),
-        // body
-        Expanded(
-          child: prog.total == 0
-              ? _EmptyState(tone: tn)
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                  physics: const BouncingScrollPhysics(),
-                  children: bodyWidgets,
+            // body
+            Expanded(
+              child: prog.total == 0
+                  ? _EmptyState(tone: tn)
+                  : (_searchQuery.isNotEmpty && bodyWidgets.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(AppIcons.search, size: 34, color: LoTheme.lineStrong),
+                              const SizedBox(height: 12),
+                              Text(
+                                isFr 
+                                    ? 'Aucun article trouvé pour « $_searchQuery »' 
+                                    : 'No items found for "$_searchQuery"',
+                                style: LoTheme.font(size: 15, weight: FontWeight.w600, color: LoTheme.ink3),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                          physics: const BouncingScrollPhysics(),
+                          children: bodyWidgets,
+                        )),
+            ),
+          ]),
+          if (_showConfetti)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: LoConfetti(
+                  onFinished: () => setState(() => _showConfetti = false),
                 ),
-        ),
-      ]),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: _Footer(listId: list.id),
     );
   }
@@ -278,6 +403,7 @@ class _RecipeBlock extends StatelessWidget {
   final bool servingsOpen;
   final VoidCallback onToggleCollapse;
   final VoidCallback onToggleServings;
+  final String searchQuery;
   const _RecipeBlock({
     super.key,
     required this.list,
@@ -286,10 +412,16 @@ class _RecipeBlock extends StatelessWidget {
     required this.servingsOpen,
     required this.onToggleCollapse,
     required this.onToggleServings,
+    required this.searchQuery,
   });
 
   @override
   Widget build(BuildContext context) {
+    final filteredItems = searchQuery.isEmpty 
+        ? block.items 
+        : block.items.where((it) => it.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+    if (filteredItems.isEmpty && searchQuery.isNotEmpty) return const SizedBox.shrink();
+
     final store = context.read<AppStore>();
     final tn = Tone.of(block.tone);
     return Container(
@@ -379,7 +511,7 @@ class _RecipeBlock extends StatelessWidget {
               : Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
                   child: Column(children: [
-                    for (final it in block.items) _ItemRow(list: list, block: block, item: it),
+                    for (final it in filteredItems) _ItemRow(list: list, block: block, item: it),
                     Pressable(
                       scale: 0.98,
                       onTap: () => openAddItem(context, list.id, blockId: block.id),
@@ -409,16 +541,20 @@ class _RecipeBlock extends StatelessWidget {
 class _LooseBlock extends StatelessWidget {
   final ShoppingList list;
   final Block block;
-  const _LooseBlock({super.key, required this.list, required this.block});
+  final String searchQuery;
+  const _LooseBlock({super.key, required this.list, required this.block, required this.searchQuery});
 
   @override
   Widget build(BuildContext context) {
-    if (block.items.isEmpty) return const SizedBox.shrink();
+    final filteredItems = searchQuery.isEmpty 
+        ? block.items 
+        : block.items.where((it) => it.name.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+    if (filteredItems.isEmpty) return const SizedBox.shrink();
 
     // Group items by category
     final Map<String, List<Item>> groups = {};
-    for (final it in block.items) {
-      final cat = getCategoryForProduct(it.name);
+    for (final it in filteredItems) {
+      final cat = it.customCategory ?? getCategoryForProduct(it.name);
       groups.putIfAbsent(cat, () => []).add(it);
     }
 
@@ -587,22 +723,7 @@ IconData _getCategoryIcon(String cat) {
 }
 
 String _getCategoryDisplayName(BuildContext context, String cat) {
-  switch (cat) {
-    case 'Fruits & Légumes':
-      return context.t('cat.fruits');
-    case 'Produits Laitiers & Œufs':
-      return context.t('cat.dairy');
-    case 'Boulangerie':
-      return context.t('cat.bakery');
-    case 'Boucherie & Poissonnerie':
-      return context.t('cat.meat');
-    case 'Épicerie':
-      return context.t('cat.grocery');
-    case 'Boissons':
-      return context.t('cat.drinks');
-    default:
-      return context.t('cat.bulk');
-  }
+  return context.categoryName(cat);
 }
 
 // ── footer actions ──────────────────────────────────────────

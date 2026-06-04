@@ -10,6 +10,7 @@ import '../l10n/l10n.dart';
 import '../widgets/animations.dart';
 import '../widgets/primitives.dart';
 import '../widgets/sheets.dart';
+import '../widgets/toast.dart';
 
 class ListDetailScreen extends StatefulWidget {
   final String listId;
@@ -218,34 +219,53 @@ class _ItemRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = context.read<AppStore>();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      child: Row(children: [
-        LoCheckbox(checked: item.checked, onToggle: () => store.toggleItem(list.id, block.id, item.id)),
-        const SizedBox(width: 13),
-        Expanded(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => store.toggleItem(list.id, block.id, item.id),
-            child: AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 180),
-              style: LoTheme.font(
-                size: 16,
-                weight: FontWeight.w600,
-                color: item.checked ? LoTheme.ink3 : LoTheme.ink,
-                decoration: item.checked ? TextDecoration.lineThrough : TextDecoration.none,
-                decorationColor: LoTheme.primary,
+    final isFr = store.locale == 'fr';
+    return Dismissible(
+      key: ValueKey(item.id),
+      direction: DismissDirection.endToStart,
+      onDismissed: (_) {
+        store.deleteItem(list.id, block.id, item.id);
+        LoToast.show(context, isFr ? '${item.name} supprimé' : '${item.name} deleted');
+      },
+      background: Container(color: Colors.transparent),
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: LoTheme.dangerSoft,
+          borderRadius: BorderRadius.circular(LoTheme.radius),
+        ),
+        child: const Icon(AppIcons.trash2, color: LoTheme.danger, size: 20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        child: Row(children: [
+          LoCheckbox(checked: item.checked, onToggle: () => store.toggleItem(list.id, block.id, item.id)),
+          const SizedBox(width: 13),
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => store.toggleItem(list.id, block.id, item.id),
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 180),
+                style: LoTheme.font(
+                  size: 16,
+                  weight: FontWeight.w600,
+                  color: item.checked ? LoTheme.ink3 : LoTheme.ink,
+                  decoration: item.checked ? TextDecoration.lineThrough : TextDecoration.none,
+                  decorationColor: LoTheme.primary,
+                ),
+                child: Text(item.name),
               ),
-              child: Text(item.name),
             ),
           ),
-        ),
-        Pressable(
-          scale: 0.9,
-          onTap: () => openEditItem(context, list.id, block.id, item),
-          child: QtyChip(qty: item.qty, unit: item.unit, dim: item.checked),
-        ),
-      ]),
+          Pressable(
+            scale: 0.9,
+            onTap: () => openEditItem(context, list.id, block.id, item),
+            child: QtyChip(qty: item.qty, unit: item.unit, dim: item.checked),
+          ),
+        ]),
+      ),
     );
   }
 }
@@ -482,48 +502,66 @@ class _AisleItemRow extends StatelessWidget {
         ? (isFr ? 'pour ${block.name}' : 'for ${block.name}')
         : (isFr ? 'en vrac' : 'loose');
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      child: Row(children: [
-        LoCheckbox(checked: item.checked, onToggle: () => store.toggleItem(list.id, block.id, item.id)),
-        const SizedBox(width: 13),
-        Expanded(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => store.toggleItem(list.id, block.id, item.id),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 180),
-                  style: LoTheme.font(
-                    size: 16.0,
-                    weight: FontWeight.w600,
-                    color: item.checked ? LoTheme.ink3 : LoTheme.ink,
-                    decoration: item.checked ? TextDecoration.lineThrough : TextDecoration.none,
-                    decorationColor: LoTheme.primary,
+    return Dismissible(
+      key: ValueKey(item.id),
+      direction: DismissDirection.endToStart,
+      onDismissed: (_) {
+        store.deleteItem(list.id, block.id, item.id);
+        LoToast.show(context, isFr ? '${item.name} supprimé' : '${item.name} deleted');
+      },
+      background: Container(color: Colors.transparent),
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: LoTheme.dangerSoft,
+          borderRadius: BorderRadius.circular(LoTheme.radius),
+        ),
+        child: const Icon(AppIcons.trash2, color: LoTheme.danger, size: 20),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        child: Row(children: [
+          LoCheckbox(checked: item.checked, onToggle: () => store.toggleItem(list.id, block.id, item.id)),
+          const SizedBox(width: 13),
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => store.toggleItem(list.id, block.id, item.id),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 180),
+                    style: LoTheme.font(
+                      size: 16.0,
+                      weight: FontWeight.w600,
+                      color: item.checked ? LoTheme.ink3 : LoTheme.ink,
+                      decoration: item.checked ? TextDecoration.lineThrough : TextDecoration.none,
+                      decorationColor: LoTheme.primary,
+                    ),
+                    child: Text(item.name),
                   ),
-                  child: Text(item.name),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  originLabel,
-                  style: LoTheme.font(
-                    size: 12,
-                    weight: FontWeight.w600,
-                    color: LoTheme.ink3,
+                  const SizedBox(height: 2),
+                  Text(
+                    originLabel,
+                    style: LoTheme.font(
+                      size: 12,
+                      weight: FontWeight.w600,
+                      color: LoTheme.ink3,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        Pressable(
-          scale: 0.9,
-          onTap: () => openEditItem(context, list.id, block.id, item),
-          child: QtyChip(qty: item.qty, unit: item.unit, dim: item.checked),
-        ),
-      ]),
+          Pressable(
+            scale: 0.9,
+            onTap: () => openEditItem(context, list.id, block.id, item),
+            child: QtyChip(qty: item.qty, unit: item.unit, dim: item.checked),
+          ),
+        ]),
+      ),
     );
   }
 }

@@ -11,6 +11,7 @@ import '../widgets/primitives.dart';
 import '../widgets/sheets.dart';
 import '../widgets/animations.dart';
 import '../widgets/toast.dart';
+import 'cooking_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -51,11 +52,17 @@ class _ExploreScreenState extends State<ExploreScreen> {
       (id: 'dessert', label: context.t('filter.dessert')),
     ];
 
-    // Filter recipes by search query + selected tag chip
+    // Filter recipes by search query + selected tag chip + dietary filters
     final filtered = kCatalogRecipes.where((r) {
       final name = isFr ? r.nameFr : r.nameEn;
       final matchesQuery = name.toLowerCase().contains(_q.toLowerCase());
       if (!matchesQuery) return false;
+
+      // Dietary & Allergen filters
+      if (store.activeDietaryFilters.isNotEmpty) {
+        final matchesDiets = store.activeDietaryFilters.every((tag) => r.tags.contains(tag));
+        if (!matchesDiets) return false;
+      }
 
       if (_activeTag != 'all') {
         return r.tags.contains(_activeTag);
@@ -98,6 +105,23 @@ class _ExploreScreenState extends State<ExploreScreen> {
                         border: InputBorder.none,
                         hintText: context.t('search.explore'),
                         hintStyle: LoTheme.font(size: 15, weight: FontWeight.w600, color: LoTheme.ink3),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Pressable(
+                    onTap: () => openDietaryFilterSheet(context),
+                    child: AnimatedContainer(
+                      duration: LoTheme.fast,
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(
+                        color: store.activeDietaryFilters.isNotEmpty ? LoTheme.primarySoft : Colors.transparent,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.eco_rounded,
+                        size: 20,
+                        color: store.activeDietaryFilters.isNotEmpty ? LoTheme.primaryPress : LoTheme.ink3,
                       ),
                     ),
                   ),
@@ -371,6 +395,27 @@ class _CatalogDetailBodyState extends State<_CatalogDetailBody> {
           ),
         ),
         const SizedBox(height: 20),
+        if (instructions.isNotEmpty) ...[
+          LoButton(
+            label: isFr ? 'commencer à cuisiner' : 'start cooking',
+            icon: Icons.restaurant_menu_rounded,
+            full: true,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CookingScreen(
+                    recipeName: name,
+                    tone: r.tone,
+                    instructions: instructions,
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 10),
+        ],
         LoButton(
           label: context.t('btn.add_to_list'),
           icon: AppIcons.shoppingCart,

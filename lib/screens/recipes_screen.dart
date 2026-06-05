@@ -73,6 +73,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
     final filtered = store.recipes.where((r) {
       final matchesQuery = r.name.toLowerCase().contains(_q.toLowerCase());
       if (!matchesQuery) return false;
+
+      // Dietary & Allergen filters
+      if (store.activeDietaryFilters.isNotEmpty) {
+        final matchesDiets = store.activeDietaryFilters.every((tag) => r.tags.contains(tag));
+        if (!matchesDiets) return false;
+      }
+
       return _matchesTag(r, _activeTag);
     }).toList();
 
@@ -108,6 +115,23 @@ class _RecipesScreenState extends State<RecipesScreen> {
                     border: InputBorder.none,
                     hintText: context.t('search.recipes'),
                     hintStyle: LoTheme.font(size: 15, weight: FontWeight.w600, color: LoTheme.ink3),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Pressable(
+                onTap: () => openDietaryFilterSheet(context),
+                child: AnimatedContainer(
+                  duration: LoTheme.fast,
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: store.activeDietaryFilters.isNotEmpty ? LoTheme.primarySoft : Colors.transparent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.eco_rounded,
+                    size: 20,
+                    color: store.activeDietaryFilters.isNotEmpty ? LoTheme.primaryPress : LoTheme.ink3,
                   ),
                 ),
               ),

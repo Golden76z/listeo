@@ -77,14 +77,10 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
 
     final List<Widget> bodyWidgets;
     if (_groupByAisle) {
-      final Map<String, List<_GroupedItem>> groups = {};
-      for (final b in list.blocks) {
-        for (final it in b.items) {
-          if (_searchQuery.isEmpty || it.name.toLowerCase().contains(_searchQuery.toLowerCase())) {
-            final cat = it.customCategory ?? getCategoryForProduct(it.name);
-            groups.putIfAbsent(cat, () => []).add(_GroupedItem(b, it));
-          }
-        }
+      final consolidatedList = consolidateItems(list.blocks, searchQuery: _searchQuery);
+      final Map<String, List<ConsolidatedItem>> groups = {};
+      for (final ci in consolidatedList) {
+        groups.putIfAbsent(ci.category, () => []).add(ci);
       }
 
       final order = [
@@ -131,12 +127,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
             ),
             child: Column(
               children: [
-                for (final gItem in groups[cat]!)
-                  _AisleItemRow(
-                    key: ValueKey(gItem.item.id),
+                for (final ci in groups[cat]!)
+                  _ConsolidatedItemRow(
+                    key: ValueKey('${ci.name}|${ci.unit}'),
                     list: list,
-                    block: gItem.block,
-                    item: gItem.item,
+                    ci: ci,
                   ),
               ],
             ),
@@ -295,7 +290,16 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
             // body
             Expanded(
               child: prog.total == 0
-                  ? _EmptyState(tone: tn)
+                  ? ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                      physics: const BouncingScrollPhysics(),
+                      children: [
+                        const SizedBox(height: 60),
+                        _EmptyState(tone: tn),
+                        const SizedBox(height: 60),
+                        _StaplesPanel(list: list),
+                      ],
+                    )
                   : (_searchQuery.isNotEmpty && bodyWidgets.isEmpty
                       ? Center(
                           child: Column(
@@ -315,7 +319,11 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                       : ListView(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                           physics: const BouncingScrollPhysics(),
-                          children: bodyWidgets,
+                          children: [
+                            ...bodyWidgets,
+                            const SizedBox(height: 24),
+                            _StaplesPanel(list: list),
+                          ],
                         )),
             ),
           ]),
@@ -343,8 +351,21 @@ class _ItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.read<AppStore>();
+    final store = context.watch<AppStore>();
     final isFr = store.locale == 'fr';
+    
+    final deduction = store.computeDeduction(
+      itemName: item.name,
+      neededQty: item.qty,
+      neededUnit: item.unit,
+      useInventory: list.useInventory,
+    );
+    final inStock = deduction.inStock;
+    final displayQty = deduction.displayQty;
+    final subtractionLabel = deduction.subtractionLabel;
+
+    final dim = item.checked || inStock;
+
     return Dismissible(
       key: ValueKey(item.id),
       direction: DismissDirection.endToStart,
@@ -371,23 +392,66 @@ class _ItemRow extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => store.toggleItem(list.id, block.id, item.id),
-              child: AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 180),
-                style: LoTheme.font(
-                  size: 16,
-                  weight: FontWeight.w600,
-                  color: item.checked ? LoTheme.ink3 : LoTheme.ink,
-                  decoration: item.checked ? TextDecoration.lineThrough : TextDecoration.none,
-                  decorationColor: LoTheme.primary,
-                ),
-                child: Text(item.name),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 180),
+                          style: LoTheme.font(
+                            size: 16,
+                            weight: FontWeight.w600,
+                            color: dim ? LoTheme.ink3 : LoTheme.ink,
+                            decoration: item.checked ? TextDecoration.lineThrough : TextDecoration.none,
+                            decorationColor: LoTheme.primary,
+                          ),
+                          child: Text(item.name),
+                        ),
+                      ),
+                      if (inStock) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: LoTheme.primarySoft,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.inventory_2_rounded, size: 10, color: LoTheme.primaryPress),
+                              const SizedBox(width: 3),
+                              Text(
+                                isFr ? 'En stock' : 'In stock',
+                                style: LoTheme.font(size: 10, weight: FontWeight.w700, color: LoTheme.primaryPress),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (subtractionLabel.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtractionLabel,
+                      style: LoTheme.font(
+                        size: 12,
+                        weight: FontWeight.w600,
+                        color: LoTheme.ink3,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
           Pressable(
             scale: 0.9,
             onTap: () => openEditItem(context, list.id, block.id, item),
-            child: QtyChip(qty: item.qty, unit: item.unit, dim: item.checked),
+            child: QtyChip(qty: inStock ? item.qty : displayQty, unit: item.unit, dim: dim),
           ),
         ]),
       ),
@@ -616,34 +680,50 @@ class _LooseBlock extends StatelessWidget {
   }
 }
 
-class _GroupedItem {
-  final Block block;
-  final Item item;
-  const _GroupedItem(this.block, this.item);
-}
-
-// ── aisle sorted item row ───────────────────────────────────
-class _AisleItemRow extends StatelessWidget {
+class _ConsolidatedItemRow extends StatelessWidget {
   final ShoppingList list;
-  final Block block;
-  final Item item;
-  const _AisleItemRow({super.key, required this.list, required this.block, required this.item});
+  final ConsolidatedItem ci;
+  const _ConsolidatedItemRow({super.key, required this.list, required this.ci});
 
   @override
   Widget build(BuildContext context) {
-    final store = context.read<AppStore>();
-    final hasRecipe = block.isRecipe;
+    final store = context.watch<AppStore>();
     final isFr = store.locale == 'fr';
-    final originLabel = hasRecipe 
-        ? (isFr ? 'pour ${block.name}' : 'for ${block.name}')
-        : (isFr ? 'en vrac' : 'loose');
+
+    final deduction = store.computeDeduction(
+      itemName: ci.name,
+      neededQty: ci.totalQty,
+      neededUnit: ci.unit,
+      useInventory: list.useInventory,
+    );
+    final inStock = deduction.inStock;
+    final displayQty = deduction.displayQty;
+    final subtractionLabel = deduction.subtractionLabel;
+
+    final dim = ci.checked || inStock;
+
+    final labels = <String>[];
+    for (final b in ci.blocks) {
+      if (b.isRecipe) {
+        labels.add(isFr ? 'pour ${b.name}' : 'for ${b.name}');
+      } else {
+        labels.add(isFr ? 'en vrac' : 'loose');
+      }
+    }
+    var subtitleLabel = labels.join(', ');
+    if (subtractionLabel.isNotEmpty) {
+      subtitleLabel += ' • $subtractionLabel';
+    }
+
+    final itemIds = ci.items.map((it) => it.id).toList();
+    final blockIds = ci.blocks.map((b) => b.id).toList();
 
     return Dismissible(
-      key: ValueKey(item.id),
+      key: ValueKey('${ci.name}|${ci.unit}'),
       direction: DismissDirection.endToStart,
       onDismissed: (_) {
-        store.deleteItem(list.id, block.id, item.id);
-        LoToast.show(context, isFr ? '${item.name} supprimé' : '${item.name} deleted');
+        store.deleteConsolidatedItem(list.id, blockIds, itemIds);
+        LoToast.show(context, isFr ? '${ci.name} supprimé' : '${ci.name} deleted');
       },
       background: Container(color: Colors.transparent),
       secondaryBackground: Container(
@@ -658,29 +738,61 @@ class _AisleItemRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(children: [
-          LoCheckbox(checked: item.checked, onToggle: () => store.toggleItem(list.id, block.id, item.id)),
+          LoCheckbox(
+            checked: ci.checked,
+            onToggle: () => store.toggleConsolidatedItem(list.id, itemIds, !ci.checked),
+          ),
           const SizedBox(width: 13),
           Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => store.toggleItem(list.id, block.id, item.id),
+              onTap: () => store.toggleConsolidatedItem(list.id, itemIds, !ci.checked),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 180),
-                    style: LoTheme.font(
-                      size: 16.0,
-                      weight: FontWeight.w600,
-                      color: item.checked ? LoTheme.ink3 : LoTheme.ink,
-                      decoration: item.checked ? TextDecoration.lineThrough : TextDecoration.none,
-                      decorationColor: LoTheme.primary,
-                    ),
-                    child: Text(item.name),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 180),
+                          style: LoTheme.font(
+                            size: 16.0,
+                            weight: FontWeight.w600,
+                            color: dim ? LoTheme.ink3 : LoTheme.ink,
+                            decoration: ci.checked ? TextDecoration.lineThrough : TextDecoration.none,
+                            decorationColor: LoTheme.primary,
+                          ),
+                          child: Text(ci.name),
+                        ),
+                      ),
+                      if (inStock) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: LoTheme.primarySoft,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.inventory_2_rounded, size: 10, color: LoTheme.primaryPress),
+                              const SizedBox(width: 3),
+                              Text(
+                                isFr ? 'En stock' : 'In stock',
+                                style: LoTheme.font(size: 10, weight: FontWeight.w700, color: LoTheme.primaryPress),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    originLabel,
+                    subtitleLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: LoTheme.font(
                       size: 12,
                       weight: FontWeight.w600,
@@ -693,8 +805,8 @@ class _AisleItemRow extends StatelessWidget {
           ),
           Pressable(
             scale: 0.9,
-            onTap: () => openEditItem(context, list.id, block.id, item),
-            child: QtyChip(qty: item.qty, unit: item.unit, dim: item.checked),
+            onTap: () => openEditConsolidatedItem(context, list.id, ci),
+            child: QtyChip(qty: inStock ? ci.totalQty : displayQty, unit: ci.unit, dim: dim),
           ),
         ]),
       ),
@@ -774,6 +886,281 @@ class _EmptyState extends StatelessWidget {
         const SizedBox(height: 4),
         Text(context.t('list.empty_desc'), style: LoTheme.font(size: 14, weight: FontWeight.w500, color: LoTheme.ink3)),
       ]),
+    );
+  }
+}
+
+// ── staples panel ───────────────────────────────────────────
+class _StaplesPanel extends StatefulWidget {
+  final ShoppingList list;
+  const _StaplesPanel({required this.list});
+
+  @override
+  State<_StaplesPanel> createState() => _StaplesPanelState();
+}
+
+class _StaplesPanelState extends State<_StaplesPanel> {
+  bool _expanded = false;
+  bool _adding = false;
+  final _newStapleCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _newStapleCtrl.dispose();
+    super.dispose();
+  }
+
+  bool _listContainsItem(ShoppingList list, String name) {
+    final cleanName = name.toLowerCase().trim();
+    for (final b in list.blocks) {
+      for (final it in b.items) {
+        if (it.name.toLowerCase().trim() == cleanName) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  void _addCustomStaple(AppStore store) {
+    final text = _newStapleCtrl.text.trim();
+    if (text.isNotEmpty) {
+      store.addStaple(text);
+      _newStapleCtrl.clear();
+      setState(() => _adding = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final isFr = store.locale == 'fr';
+    final list = widget.list;
+
+    // Count how many staples are currently in the list
+    int inListCount = 0;
+    for (final s in store.staples) {
+      if (_listContainsItem(list, s)) {
+        inListCount++;
+      }
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: LoTheme.surface,
+        borderRadius: BorderRadius.circular(LoTheme.radius),
+        border: Border.all(color: LoTheme.line),
+        boxShadow: LoTheme.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header (Click to toggle expand)
+          Pressable(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: inListCount > 0 ? LoTheme.primarySoft : LoTheme.surface2,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      AppIcons.store,
+                      size: 16,
+                      color: inListCount > 0 ? LoTheme.primaryPress : LoTheme.ink2,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isFr ? 'Produits de base' : 'Pantry Staples',
+                          style: LoTheme.font(size: 15, weight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isFr
+                              ? '$inListCount / ${store.staples.length} sur la liste'
+                              : '$inListCount / ${store.staples.length} in list',
+                          style: LoTheme.font(size: 12, color: LoTheme.ink3, weight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    _expanded ? AppIcons.chevronDown : AppIcons.chevronRight,
+                    size: 18,
+                    color: LoTheme.ink3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Expandable Body
+          if (_expanded) ...[
+            const Divider(color: LoTheme.line, height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isFr
+                        ? 'Touche un ingrédient pour l\'ajouter ou le retirer. Appuie long pour supprimer.'
+                        : 'Tap to add/remove from list. Long press to delete.',
+                    style: LoTheme.font(size: 12, color: LoTheme.ink3, weight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      // Staples Chips
+                      ...store.staples.map((staple) {
+                        final inList = _listContainsItem(list, staple);
+                        return GestureDetector(
+                          onLongPress: () {
+                            store.removeStaple(staple);
+                            LoToast.show(
+                              context,
+                              isFr ? '$staple retiré des favoris' : '$staple removed from staples',
+                            );
+                          },
+                          child: Pressable(
+                            onTap: () {
+                              if (inList) {
+                                store.removeLooseItemByName(list.id, staple);
+                                LoToast.show(
+                                  context,
+                                  isFr ? '$staple retiré de la liste' : '$staple removed from list',
+                                );
+                              } else {
+                                store.addLooseItem(
+                                  list.id,
+                                  name: staple,
+                                  qty: 1,
+                                  unit: 'pc',
+                                );
+                                LoToast.show(
+                                  context,
+                                  isFr ? '$staple ajouté en vrac' : '$staple added as loose item',
+                                );
+                              }
+                            },
+                            child: AnimatedContainer(
+                              duration: LoTheme.fast,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: inList ? LoTheme.primarySoft : LoTheme.surface2,
+                                borderRadius: BorderRadius.circular(LoTheme.r(0.8)),
+                                border: Border.all(
+                                  color: inList ? LoTheme.primaryPress : Colors.transparent,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (inList) ...[
+                                    const Icon(AppIcons.check, size: 12, color: LoTheme.primaryPress),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    staple,
+                                    style: LoTheme.font(
+                                      size: 13,
+                                      weight: inList ? FontWeight.w700 : FontWeight.w600,
+                                      color: inList ? LoTheme.primaryPress : LoTheme.ink2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                      
+                      // Add Staple Form or Button
+                      if (_adding)
+                        Container(
+                          width: 160,
+                          height: 32,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: LoTheme.surface2,
+                            borderRadius: BorderRadius.circular(LoTheme.r(0.8)),
+                            border: Border.all(color: LoTheme.lineStrong, width: 1),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _newStapleCtrl,
+                                  autofocus: true,
+                                  style: LoTheme.font(size: 12, weight: FontWeight.w600),
+                                  decoration: InputDecoration(
+                                    isCollapsed: true,
+                                    border: InputBorder.none,
+                                    hintText: isFr ? 'Nouveau...' : 'New...',
+                                    hintStyle: LoTheme.font(size: 12, color: LoTheme.ink3, weight: FontWeight.w500),
+                                  ),
+                                  onSubmitted: (_) => _addCustomStaple(store),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => _addCustomStaple(store),
+                                child: const Icon(AppIcons.check, size: 14, color: LoTheme.primary),
+                              ),
+                              const SizedBox(width: 4),
+                              GestureDetector(
+                                onTap: () => setState(() => _adding = false),
+                                child: const Icon(AppIcons.x, size: 14, color: LoTheme.danger),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Pressable(
+                          onTap: () => setState(() => _adding = true),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: LoTheme.surface2,
+                              borderRadius: BorderRadius.circular(LoTheme.r(0.8)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(AppIcons.plus, size: 12, color: LoTheme.ink3),
+                                const SizedBox(width: 4),
+                                Text(
+                                  isFr ? 'Ajouter' : 'Add',
+                                  style: LoTheme.font(
+                                    size: 13,
+                                    weight: FontWeight.w600,
+                                    color: LoTheme.ink3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

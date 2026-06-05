@@ -12,6 +12,7 @@ import 'primitives.dart';
 import 'recipe_editor.dart';
 import 'toast.dart';
 import 'nav.dart';
+import '../screens/cooking_screen.dart';
 
 // ── Sheet shell ─────────────────────────────────────────────
 Future<T?> showLoSheet<T>(BuildContext context, {String? title, required WidgetBuilder builder}) {
@@ -609,6 +610,96 @@ class _EditItemBodyState extends State<_EditItemBody> {
   }
 }
 
+// ── Edit inventory item ──────────────────────────────────────
+void openEditInventoryItem(BuildContext context, InventoryItem item) {
+  final store = context.read<AppStore>();
+  showLoSheet(
+    context,
+    title: store.locale == 'fr' ? "modifier l'inventaire" : "edit inventory",
+    builder: (ctx) => _EditInventoryItemBody(store: store, item: item),
+  );
+}
+
+class _EditInventoryItemBody extends StatefulWidget {
+  final AppStore store;
+  final InventoryItem item;
+  const _EditInventoryItemBody({required this.store, required this.item});
+  @override
+  State<_EditInventoryItemBody> createState() => _EditInventoryItemBodyState();
+}
+
+class _EditInventoryItemBodyState extends State<_EditInventoryItemBody> {
+  late final _name = TextEditingController(text: widget.item.name);
+  late final _qty = TextEditingController(text: numFr(widget.item.qty));
+  late String _unit = widget.item.unit;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _qty.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final nameVal = _name.text.trim().isEmpty ? widget.item.name : _name.text.trim();
+    final qtyVal = double.tryParse(_qty.text.replaceAll(',', '.')) ?? widget.item.qty;
+    widget.store.updateInventoryItem(widget.item.id, name: nameVal, qty: qtyVal, unit: _unit);
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFr = widget.store.locale == 'fr';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        sheetLabel(isFr ? 'produit' : 'product'),
+        Row(
+          children: [
+            Expanded(child: LoTextField(controller: _name)),
+            const SizedBox(width: 10),
+            InlineInput(
+              controller: _qty,
+              width: 64,
+              align: TextAlign.center,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        UnitChips(value: _unit, onChange: (v) => setState(() => _unit = v)),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(
+              child: LoButton(
+                label: isFr ? 'supprimer' : 'delete',
+                variant: BtnVariant.danger,
+                icon: AppIcons.trash2,
+                full: true,
+                onTap: () {
+                  widget.store.deleteInventoryItem(widget.item.id);
+                  LoToast.show(context, isFr ? '${widget.item.name} supprimé' : '${widget.item.name} deleted');
+                  Navigator.pop(context);
+                },
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: LoButton(
+                label: isFr ? 'enregistrer' : 'save',
+                icon: AppIcons.check,
+                full: true,
+                onTap: _save,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 // ── Add dish (menu / configure / adhoc) ─────────────────────
 void openAddDish(BuildContext context, String listId) {
   final store = context.read<AppStore>();
@@ -883,6 +974,27 @@ class _RecipeDetailBody extends StatelessWidget {
         ),
       ],
       const SizedBox(height: 18),
+      if (store.getRecipeInstructions(r.id).isNotEmpty) ...[
+        LoButton(
+          label: store.locale == 'fr' ? 'commencer à cuisiner' : 'start cooking',
+          icon: Icons.restaurant_menu_rounded,
+          full: true,
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CookingScreen(
+                  recipeName: r.name,
+                  tone: r.tone,
+                  instructions: store.getRecipeInstructions(r.id),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+      ],
       LoButton(label: 'ajouter à une liste', icon: AppIcons.shoppingCart, full: true, onTap: () {
         final nav = Navigator.of(context);
         nav.pop();
@@ -1047,6 +1159,7 @@ class _RecipeEditorBodyState extends State<_RecipeEditorBody> {
             tone: r.tone,
             items: r.items.map((it) => Item(id: uid('it'), name: it.name, qty: it.qty, unit: it.unit)).toList(),
             instructions: List.from(r.instructions),
+            tags: List.from(r.tags),
           )
         : RecipeDraft(servings: 4, tone: Tone.allTones[widget.store.recipes.length % Tone.allTones.length]);
   }
@@ -1069,6 +1182,7 @@ class _RecipeEditorBodyState extends State<_RecipeEditorBody> {
             tone: _draft.tone,
             items: _draft.items,
             instructions: _draft.instructions,
+            tags: _draft.tags,
           );
           LoToast.show(context, _existing ? 'Recette modifiée' : 'Recette enregistrée');
           Navigator.pop(context);
@@ -1142,64 +1256,130 @@ class _ConfirmBody extends StatelessWidget {
 void openListMenu(BuildContext context, ShoppingList list) {
   final store = context.read<AppStore>();
   showLoSheet(context, title: list.name, builder: (ctx) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12, left: 6, right: 6),
-          child: Text('COULEUR DE LA LISTE', style: LoTheme.font(size: 11, weight: FontWeight.w700, color: LoTheme.ink3, letterSpacing: 0.5)),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16, left: 6, right: 6),
-          child: StatefulBuilder(
-            builder: (context, setState) {
-              return TonePicker(
+    return StatefulBuilder(
+      builder: (context, setState) {
+        final isFr = store.locale == 'fr';
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12, left: 6, right: 6),
+              child: Text(
+                isFr ? 'COULEUR DE LA LISTE' : 'LIST COLOR',
+                style: LoTheme.font(size: 11, weight: FontWeight.w700, color: LoTheme.ink3, letterSpacing: 0.5),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16, left: 6, right: 6),
+              child: TonePicker(
                 value: list.tone,
                 onChange: (newTone) {
                   setState(() {});
                   store.changeListTone(list.id, newTone);
                 },
-              );
-            },
-          ),
-        ),
-        const Divider(color: LoTheme.line, height: 1),
-        _MenuRow(icon: AppIcons.pencil, label: 'renommer la liste', onTap: () {
-          Navigator.pop(context);
-          openRename(context, title: 'renommer la liste', value: list.name, onSave: (v) => store.renameList(list.id, v));
-        }),
-        _MenuRow(icon: AppIcons.copy, label: 'dupliquer', onTap: () {
-          store.duplicateList(list.id);
-          LoToast.show(context, 'Liste dupliquée');
-          Navigator.pop(context);
-        }),
-        _MenuRow(icon: AppIcons.share, label: 'partager la liste', onTap: () {
-          shareList(context, list);
-          Navigator.pop(context);
-        }),
-        _MenuRow(icon: AppIcons.uncheck, label: 'tout décocher', onTap: () {
-          store.uncheckAllItems(list.id);
-          LoToast.show(context, 'Articles décochés');
-          Navigator.pop(context);
-        }),
-        _MenuRow(icon: AppIcons.deleteChecked, label: 'nettoyer les articles cochés', onTap: () {
-          store.clearCheckedItems(list.id);
-          LoToast.show(context, 'Articles cochés supprimés');
-          Navigator.pop(context);
-        }),
-        _MenuRow(icon: AppIcons.trash2, label: 'supprimer la liste', danger: true, last: true, onTap: () {
-          final nav = Navigator.of(context);
-          nav.pop();
-          openConfirm(nav.context,
-              title: 'Supprimer la liste ?',
-              message: '« ${list.name} » et tout son contenu seront supprimés.',
-              confirmLabel: 'supprimer',
-              onConfirm: (ctx) {
-                store.deleteList(list.id);
-                LoToast.show(ctx, 'Liste supprimée');
-              });
-        }),
-      ],
+              ),
+            ),
+            const Divider(color: LoTheme.line, height: 1),
+            // Inventory setting toggle
+            Pressable(
+              scale: 0.99,
+              onTap: () {
+                store.toggleListUseInventory(list.id);
+                setState(() {});
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: LoTheme.line)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.inventory_2_outlined, size: 20, color: LoTheme.ink2),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.t('list.setting.use_inventory'),
+                            style: LoTheme.font(size: 16, weight: FontWeight.w600, color: LoTheme.ink),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            context.t('list.setting.use_inventory_desc'),
+                            style: LoTheme.font(size: 12.5, weight: FontWeight.w500, color: LoTheme.ink3),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 44,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(99),
+                        color: list.useInventory ? LoTheme.primary : LoTheme.lineStrong,
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: AnimatedAlign(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
+                        alignment: list.useInventory ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            _MenuRow(icon: AppIcons.pencil, label: isFr ? 'renommer la liste' : 'rename list', onTap: () {
+              Navigator.pop(context);
+              openRename(context, title: isFr ? 'renommer la liste' : 'rename list', value: list.name, onSave: (v) => store.renameList(list.id, v));
+            }),
+            _MenuRow(icon: AppIcons.copy, label: isFr ? 'dupliquer' : 'duplicate', onTap: () {
+              store.duplicateList(list.id);
+              LoToast.show(context, isFr ? 'Liste dupliquée' : 'List duplicated');
+              Navigator.pop(context);
+            }),
+            _MenuRow(icon: AppIcons.share, label: isFr ? 'partager la liste' : 'share list', onTap: () {
+              shareList(context, list);
+              Navigator.pop(context);
+            }),
+            _MenuRow(icon: AppIcons.uncheck, label: isFr ? 'tout décocher' : 'uncheck all', onTap: () {
+              store.uncheckAllItems(list.id);
+              LoToast.show(context, isFr ? 'Articles décochés' : 'Items unchecked');
+              Navigator.pop(context);
+            }),
+            _MenuRow(icon: AppIcons.deleteChecked, label: isFr ? 'nettoyer les articles cochés' : 'clear checked items', onTap: () {
+              store.clearCheckedItems(list.id);
+              LoToast.show(context, isFr ? 'Articles cochés supprimés' : 'Checked items removed');
+              Navigator.pop(context);
+            }),
+            _MenuRow(icon: AppIcons.trash2, label: isFr ? 'supprimer la liste' : 'delete list', danger: true, last: true, onTap: () {
+              final nav = Navigator.of(context);
+              nav.pop();
+              openConfirm(nav.context,
+                  title: isFr ? 'Supprimer la liste ?' : 'Delete list?',
+                  message: isFr 
+                      ? '« ${list.name} » et tout son contenu seront supprimés.' 
+                      : '“${list.name}” and all its contents will be deleted.',
+                  confirmLabel: isFr ? 'supprimer' : 'delete',
+                  onConfirm: (ctx) {
+                    store.deleteList(list.id);
+                    LoToast.show(ctx, isFr ? 'Liste supprimée' : 'List deleted');
+                  });
+            }),
+          ],
+        );
+      },
     );
   });
 }
@@ -1207,8 +1387,25 @@ void openListMenu(BuildContext context, ShoppingList list) {
 // ── Block menu ──────────────────────────────────────────────
 void openBlockMenu(BuildContext context, String listId, Block block) {
   final store = context.read<AppStore>();
+  final instructions = block.recipeId != null ? store.getRecipeInstructions(block.recipeId!) : const <String>[];
+  final hasInstructions = instructions.isNotEmpty;
+  
   showLoSheet(context, title: block.name, builder: (ctx) {
     return Column(children: [
+      if (hasInstructions)
+        _MenuRow(icon: Icons.restaurant_menu_rounded, label: store.locale == 'fr' ? 'commencer à cuisiner' : 'start cooking', onTap: () {
+          Navigator.pop(context);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CookingScreen(
+                recipeName: block.name,
+                tone: block.tone ?? 'green',
+                instructions: instructions,
+              ),
+            ),
+          );
+        }),
       _MenuRow(icon: AppIcons.pencil, label: 'renommer le plat', onTap: () {
         Navigator.pop(context);
         openRename(context, title: 'renommer le plat', value: block.name, onSave: (v) => store.renameBlock(listId, block.id, v));
@@ -1284,30 +1481,222 @@ Widget _recipeRow({required Tone tone, required String title, required String su
   );
 }
 
-String formatListAsText(ShoppingList list) {
+String formatListForSharing({
+  required BuildContext context,
+  required ShoppingList list,
+  required bool groupByAisle,
+  required bool excludeChecked,
+  required String locale,
+}) {
   final sb = StringBuffer();
+  final isFr = locale == 'fr';
+  
   sb.writeln('🛒 ${list.name}');
-  sb.writeln('--------------------');
-  for (final b in list.blocks) {
-    if (b.items.isEmpty) continue;
-    if (b.isRecipe) {
-      sb.writeln('\n🍳 ${b.name} (${b.servings} pers.) :');
-    } else {
-      sb.writeln('\n📦 ${b.name} :');
+  sb.writeln('====================');
+
+  if (groupByAisle) {
+    final consolidated = consolidateItems(list.blocks);
+    
+    final Map<String, List<ConsolidatedItem>> groups = {};
+    for (final ci in consolidated) {
+      if (excludeChecked && ci.checked) continue;
+      groups.putIfAbsent(ci.category, () => []).add(ci);
     }
-    for (final it in b.items) {
-      final checkSymbol = it.checked ? '[x]' : '[ ]';
-      final qtyStr = it.qty == 1 && it.unit == 'pc' ? '' : ' (${fmtQty(it.qty, it.unit).value}${fmtQty(it.qty, it.unit).suffix})';
-      sb.writeln('  $checkSymbol ${it.name}$qtyStr');
+    
+    final order = [
+      'Fruits & Légumes',
+      'Produits Laitiers & Œufs',
+      'Boulangerie',
+      'Boucherie & Poissonnerie',
+      'Épicerie',
+      'Boissons',
+      'En vrac',
+    ];
+
+    final sortedCats = groups.keys.toList()
+      ..sort((a, b) {
+        final idxA = order.indexOf(a);
+        final idxB = order.indexOf(b);
+        if (idxA != -1 && idxB != -1) return idxA.compareTo(idxB);
+        if (idxA != -1) return -1;
+        if (idxB != -1) return 1;
+        return a.compareTo(b);
+      });
+
+    for (final cat in sortedCats) {
+      final displayName = context.categoryName(cat);
+      sb.writeln('\n📦 ${displayName.toUpperCase()} :');
+      for (final ci in groups[cat]!) {
+        final checkSymbol = ci.checked ? '✓' : '☐';
+        final f = fmtQty(ci.totalQty, ci.unit);
+        final qtyStr = ci.totalQty == 1 && ci.unit == 'pc' ? '' : ' (${f.value}${f.suffix})';
+        
+        final sourceLabels = ci.blocks.map((b) => b.isRecipe ? b.name : (isFr ? 'vrac' : 'loose')).join(', ');
+        
+        sb.writeln('  $checkSymbol ${ci.name}$qtyStr [$sourceLabels]');
+      }
+    }
+  } else {
+    for (final b in list.blocks) {
+      final items = excludeChecked ? b.items.where((it) => !it.checked).toList() : b.items;
+      if (items.isEmpty) continue;
+      
+      if (b.isRecipe) {
+        sb.writeln('\n🍳 ${b.name} (${b.servings} ${isFr ? "pers." : "serv."}) :');
+      } else {
+        sb.writeln(isFr ? '\n📦 EN VRAC :' : '\n📦 BULK :');
+      }
+      for (final it in items) {
+        final checkSymbol = it.checked ? '✓' : '☐';
+        final f = fmtQty(it.qty, it.unit);
+        final qtyStr = it.qty == 1 && it.unit == 'pc' ? '' : ' (${f.value}${f.suffix})';
+        sb.writeln('  $checkSymbol ${it.name}$qtyStr');
+      }
     }
   }
+  
   return sb.toString();
 }
 
 void shareList(BuildContext context, ShoppingList list) {
-  final text = formatListAsText(list);
-  Clipboard.setData(ClipboardData(text: text));
-  LoToast.show(context, 'Liste copiée dans le presse-papiers');
+  final store = context.read<AppStore>();
+  showLoSheet(
+    context,
+    title: store.locale == 'fr' ? 'partager la liste' : 'share list',
+    builder: (ctx) => _ShareListBody(store: store, list: list),
+  );
+}
+
+class _ShareListBody extends StatefulWidget {
+  final AppStore store;
+  final ShoppingList list;
+  const _ShareListBody({super.key, required this.store, required this.list});
+
+  @override
+  State<_ShareListBody> createState() => _ShareListBodyState();
+}
+
+class _ShareListBodyState extends State<_ShareListBody> {
+  bool _groupByAisle = false;
+  bool _excludeChecked = false;
+
+  Widget _toggleButton({required String label, required bool active, required VoidCallback onTap}) {
+    return Expanded(
+      child: Pressable(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: LoTheme.fast,
+          height: 38,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? LoTheme.primary : LoTheme.surface2,
+            borderRadius: BorderRadius.circular(LoTheme.r(0.85)),
+          ),
+          child: Text(
+            label,
+            style: LoTheme.font(
+              size: 13,
+              weight: FontWeight.w700,
+              color: active ? Colors.white : LoTheme.ink2,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFr = widget.store.locale == 'fr';
+    
+    final previewText = formatListForSharing(
+      context: context,
+      list: widget.list,
+      groupByAisle: _groupByAisle,
+      excludeChecked: _excludeChecked,
+      locale: widget.store.locale,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(isFr ? 'GROUPER PAR' : 'GROUP BY', style: LoTheme.font(size: 11, weight: FontWeight.w700, color: LoTheme.ink3, letterSpacing: 0.5)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _toggleButton(
+              label: isFr ? 'Recettes' : 'Recipes',
+              active: !_groupByAisle,
+              onTap: () => setState(() => _groupByAisle = false),
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: isFr ? 'Rayons' : 'Aisles',
+              active: _groupByAisle,
+              onTap: () => setState(() => _groupByAisle = true),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        Text(isFr ? 'FILTRER LES ARTICLES' : 'FILTER ITEMS', style: LoTheme.font(size: 11, weight: FontWeight.w700, color: LoTheme.ink3, letterSpacing: 0.5)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            _toggleButton(
+              label: isFr ? 'Tout' : 'All',
+              active: !_excludeChecked,
+              onTap: () => setState(() => _excludeChecked = false),
+            ),
+            const SizedBox(width: 8),
+            _toggleButton(
+              label: isFr ? 'À acheter' : 'To buy',
+              active: _excludeChecked,
+              onTap: () => setState(() => _excludeChecked = true),
+            ),
+          ],
+        ),
+        
+        sheetLabel(isFr ? 'aperçu' : 'preview'),
+        Container(
+          height: 180,
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: LoTheme.bg,
+            borderRadius: BorderRadius.circular(LoTheme.radius),
+            border: Border.all(color: LoTheme.line),
+          ),
+          child: Scrollbar(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: SelectableText(
+                previewText,
+                style: LoTheme.font(
+                  size: 13.5,
+                  weight: FontWeight.w600,
+                  height: 1.45,
+                  color: LoTheme.ink2,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        
+        LoButton(
+          label: isFr ? 'copier la liste' : 'copy list',
+          icon: AppIcons.check,
+          full: true,
+          onTap: () {
+            Clipboard.setData(ClipboardData(text: previewText));
+            Navigator.pop(context);
+            LoToast.show(context, isFr ? 'Liste copiée dans le presse-papiers' : 'List copied to clipboard');
+          },
+        ),
+      ],
+    );
+  }
 }
 
 class CategoryChips extends StatelessWidget {
@@ -1507,5 +1896,273 @@ class _GenerateListFromPlannerBodyState extends State<_GenerateListFromPlannerBo
     );
   }
 }
+
+// ── Edit consolidated item ──────────────────────────────────
+void openEditConsolidatedItem(BuildContext context, String listId, ConsolidatedItem ci) {
+  final store = context.read<AppStore>();
+  showLoSheet(
+    context,
+    title: store.locale == 'fr' ? "modifier l'article groupé" : "edit grouped item",
+    builder: (ctx) => _EditConsolidatedItemBody(store: store, listId: listId, ci: ci),
+  );
+}
+
+class _EditConsolidatedItemBody extends StatefulWidget {
+  final AppStore store;
+  final String listId;
+  final ConsolidatedItem ci;
+  const _EditConsolidatedItemBody({required this.store, required this.listId, required this.ci});
+
+  @override
+  State<_EditConsolidatedItemBody> createState() => _EditConsolidatedItemBodyState();
+}
+
+class _EditConsolidatedItemBodyState extends State<_EditConsolidatedItemBody> {
+  late final _name = TextEditingController(text: widget.ci.name);
+  late final List<TextEditingController> _qtyControllers;
+  late String _unit = widget.ci.unit;
+  late String _customCategory = widget.ci.category;
+
+  @override
+  void initState() {
+    super.initState();
+    _qtyControllers = widget.ci.items.map((it) => TextEditingController(text: numFr(it.qty))).toList();
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    for (final ctrl in _qtyControllers) {
+      ctrl.dispose();
+    }
+    super.dispose();
+  }
+
+  void _save() {
+    final nameVal = _name.text.trim();
+    final newName = nameVal.isEmpty ? widget.ci.name : nameVal;
+    
+    final List<double> newQtys = [];
+    for (var i = 0; i < widget.ci.items.length; i++) {
+      final double val = double.tryParse(_qtyControllers[i].text.replaceAll(',', '.')) ?? widget.ci.items[i].qty;
+      newQtys.add(val);
+    }
+
+    final itemIds = widget.ci.items.map((it) => it.id).toList();
+    final blockIds = widget.ci.blocks.map((b) => b.id).toList();
+
+    widget.store.updateConsolidatedItem(
+      widget.listId,
+      blockIds,
+      itemIds,
+      newName,
+      newQtys,
+      _unit,
+      _customCategory,
+    );
+    
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFr = widget.store.locale == 'fr';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        sheetLabel(isFr ? 'article' : 'item'),
+        LoTextField(controller: _name),
+        const SizedBox(height: 12),
+        UnitChips(value: _unit, onChange: (v) => setState(() => _unit = v)),
+        const SizedBox(height: 14),
+        sheetLabel(context.t('item.editor.aisle')),
+        CategoryChips(value: _customCategory, onChange: (v) => setState(() => _customCategory = v)),
+        const SizedBox(height: 14),
+        sheetLabel(isFr ? 'détails par recette' : 'details by recipe'),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: LoTheme.surface2,
+            borderRadius: BorderRadius.circular(LoTheme.r(0.9)),
+          ),
+          child: Column(
+            children: [
+              for (var i = 0; i < widget.ci.items.length; i++) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          widget.ci.blocks[i].isRecipe
+                              ? widget.ci.blocks[i].name
+                              : (isFr ? 'En vrac' : 'Loose'),
+                          style: LoTheme.font(size: 14.5, weight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      InlineInput(
+                        controller: _qtyControllers[i],
+                        width: 80,
+                        align: TextAlign.center,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _unit,
+                        style: LoTheme.font(size: 14.5, weight: FontWeight.w700, color: LoTheme.ink3),
+                      ),
+                    ],
+                  ),
+                ),
+                if (i < widget.ci.items.length - 1)
+                  const Divider(color: LoTheme.line, height: 1),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            LoButton(
+              label: isFr ? 'retirer' : 'remove',
+              variant: BtnVariant.danger,
+              icon: AppIcons.trash2,
+              onTap: () {
+                final itemIds = widget.ci.items.map((it) => it.id).toList();
+                final blockIds = widget.ci.blocks.map((b) => b.id).toList();
+                widget.store.deleteConsolidatedItem(widget.listId, blockIds, itemIds);
+                Navigator.pop(context);
+              },
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: LoButton(
+                label: isFr ? 'enregistrer' : 'save',
+                icon: AppIcons.check,
+                full: true,
+                onTap: _save,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+void openDietaryFilterSheet(BuildContext context) {
+  final store = context.read<AppStore>();
+  showLoSheet(
+    context,
+    title: store.locale == 'fr' ? 'Régimes & Allergènes' : 'Diets & Allergens',
+    builder: (ctx) => _DietaryFilterSheetBody(store: store),
+  );
+}
+
+class _DietaryFilterSheetBody extends StatefulWidget {
+  final AppStore store;
+  const _DietaryFilterSheetBody({required this.store});
+
+  @override
+  State<_DietaryFilterSheetBody> createState() => _DietaryFilterSheetBodyState();
+}
+
+class _DietaryFilterSheetBodyState extends State<_DietaryFilterSheetBody> {
+  @override
+  Widget build(BuildContext context) {
+    final store = widget.store;
+    final isFr = store.locale == 'fr';
+
+    Widget filterRow({
+      required String label,
+      required String tag,
+      required IconData icon,
+    }) {
+      final active = store.activeDietaryFilters.contains(tag);
+      return Pressable(
+        onTap: () {
+          setState(() {
+            store.toggleDietaryFilter(tag);
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: BoxDecoration(
+            color: active ? LoTheme.primarySoft : LoTheme.surface2,
+            borderRadius: BorderRadius.circular(LoTheme.r(0.9)),
+            border: Border.all(
+              color: active ? LoTheme.primaryPress : Colors.transparent,
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: active ? LoTheme.primaryPress : LoTheme.ink2),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: LoTheme.font(
+                    size: 15,
+                    weight: active ? FontWeight.w700 : FontWeight.w600,
+                    color: active ? LoTheme.primaryPress : LoTheme.ink,
+                  ),
+                ),
+              ),
+              if (active)
+                const Icon(AppIcons.check, size: 18, color: LoTheme.primaryPress)
+              else
+                Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: LoTheme.lineStrong, width: 2),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        filterRow(
+          label: isFr ? 'Végétarien' : 'Vegetarian',
+          tag: 'veggie',
+          icon: Icons.grass_rounded,
+        ),
+        filterRow(
+          label: isFr ? 'Sans Gluten' : 'Gluten-Free',
+          tag: 'gluten_free',
+          icon: Icons.grain_rounded,
+        ),
+        filterRow(
+          label: isFr ? 'Sans Lactose' : 'Dairy-Free',
+          tag: 'lactose_free',
+          icon: Icons.water_drop_rounded,
+        ),
+        const SizedBox(height: 16),
+        if (store.activeDietaryFilters.isNotEmpty)
+          LoButton(
+            label: isFr ? 'réinitialiser les filtres' : 'reset filters',
+            variant: BtnVariant.soft,
+            full: true,
+            onTap: () {
+              setState(() {
+                store.clearDietaryFilters();
+              });
+            },
+          ),
+      ],
+    );
+  }
+}
+
 
 

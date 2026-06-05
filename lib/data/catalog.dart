@@ -72,7 +72,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Chicken Curry',
     tone: 'curry',
     servings: 4,
-    tags: ['poulet', 'legumes'],
+    tags: ['poulet', 'legumes', 'gluten_free', 'lactose_free'],
     ingredients: [
       CatalogIngredient(nameFr: 'Filet de poulet', nameEn: 'Chicken breast', qty: 600, unit: 'g'),
       CatalogIngredient(nameFr: 'Oignon', nameEn: 'Onion', qty: 2, unit: 'pc'),
@@ -100,7 +100,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Vegetarian Salad',
     tone: 'salade',
     servings: 2,
-    tags: ['legumes'],
+    tags: ['legumes', 'veggie', 'gluten_free', 'lactose_free'],
     ingredients: [
       CatalogIngredient(nameFr: 'Salade', nameEn: 'Salad', qty: 1, unit: 'pc'),
       CatalogIngredient(nameFr: 'Tomates', nameEn: 'Tomatoes', qty: 2, unit: 'pc'),
@@ -129,7 +129,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Tomato Soup',
     tone: 'tomate',
     servings: 4,
-    tags: ['legumes'],
+    tags: ['legumes', 'veggie', 'gluten_free', 'lactose_free'],
     ingredients: [
       CatalogIngredient(nameFr: 'Tomates', nameEn: 'Tomatoes', qty: 1, unit: 'kg'),
       CatalogIngredient(nameFr: 'Oignon', nameEn: 'Onion', qty: 1, unit: 'pc'),
@@ -157,7 +157,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Chocolate Cake',
     tone: 'sucre',
     servings: 6,
-    tags: ['dessert'],
+    tags: ['dessert', 'veggie'],
     ingredients: [
       CatalogIngredient(nameFr: 'Chocolat', nameEn: 'Chocolate', qty: 200, unit: 'g'),
       CatalogIngredient(nameFr: 'Beurre', nameEn: 'Butter', qty: 125, unit: 'g'),
@@ -184,7 +184,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Avocado Toast',
     tone: 'green',
     servings: 2,
-    tags: ['legumes'],
+    tags: ['legumes', 'veggie', 'lactose_free'],
     ingredients: [
       CatalogIngredient(nameFr: 'Pain', nameEn: 'Bread', qty: 4, unit: 'pc'),
       CatalogIngredient(nameFr: 'Avocat', nameEn: 'Avocado', qty: 2, unit: 'pc'),
@@ -212,7 +212,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Fluffy Pancakes',
     tone: 'yellow',
     servings: 4,
-    tags: ['dessert'],
+    tags: ['dessert', 'veggie'],
     ingredients: [
       CatalogIngredient(nameFr: 'Farine', nameEn: 'Flour', qty: 250, unit: 'g'),
       CatalogIngredient(nameFr: 'Lait', nameEn: 'Milk', qty: 300, unit: 'ml'),
@@ -270,7 +270,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Classic Apple Pie',
     tone: 'sucre',
     servings: 6,
-    tags: ['dessert'],
+    tags: ['dessert', 'veggie'],
     ingredients: [
       CatalogIngredient(nameFr: 'Pâte brisée', nameEn: 'Pie crust', qty: 1, unit: 'pc'),
       CatalogIngredient(nameFr: 'Pommes gala', nameEn: 'Apples', qty: 6, unit: 'pc'),
@@ -299,7 +299,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Vanilla Crème Brûlée',
     tone: 'sucre',
     servings: 4,
-    tags: ['dessert'],
+    tags: ['dessert', 'veggie', 'gluten_free'],
     ingredients: [
       CatalogIngredient(nameFr: 'Crème liquide', nameEn: 'Heavy cream', qty: 400, unit: 'ml'),
       CatalogIngredient(nameFr: 'Oeufs', nameEn: 'Eggs', qty: 5, unit: 'pc'),
@@ -327,7 +327,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Lemon Meringue Tart',
     tone: 'sucre',
     servings: 6,
-    tags: ['dessert'],
+    tags: ['dessert', 'veggie'],
     ingredients: [
       CatalogIngredient(nameFr: 'Pâte brisée', nameEn: 'Pie crust', qty: 1, unit: 'pc'),
       CatalogIngredient(nameFr: 'Citron', nameEn: 'Lemon', qty: 3, unit: 'pc'),
@@ -354,7 +354,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Lava Chocolate Cake',
     tone: 'sucre',
     servings: 4,
-    tags: ['dessert'],
+    tags: ['dessert', 'veggie'],
     ingredients: [
       CatalogIngredient(nameFr: 'Chocolat', nameEn: 'Chocolate', qty: 100, unit: 'g'),
       CatalogIngredient(nameFr: 'Beurre', nameEn: 'Butter', qty: 80, unit: 'g'),
@@ -381,7 +381,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Classic Tiramisu',
     tone: 'sucre',
     servings: 6,
-    tags: ['dessert'],
+    tags: ['dessert', 'veggie'],
     ingredients: [
       CatalogIngredient(nameFr: 'Mascarpone', nameEn: 'Mascarpone cheese', qty: 250, unit: 'g'),
       CatalogIngredient(nameFr: 'Biscuits cuillères', nameEn: 'Ladyfingers', qty: 24, unit: 'pc'),
@@ -410,7 +410,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Fresh Fruit Salad',
     tone: 'sucre',
     servings: 4,
-    tags: ['dessert', 'legumes'],
+    tags: ['dessert', 'legumes', 'veggie', 'gluten_free', 'lactose_free'],
     ingredients: [
       CatalogIngredient(nameFr: 'Fraises', nameEn: 'Strawberries', qty: 250, unit: 'g'),
       CatalogIngredient(nameFr: 'Bananes', nameEn: 'Bananas', qty: 2, unit: 'pc'),
@@ -436,7 +436,7 @@ const List<CatalogRecipe> _kBaseCatalogRecipes = [
     nameEn: 'Crispy Homemade Waffles',
     tone: 'sucre',
     servings: 4,
-    tags: ['dessert'],
+    tags: ['dessert', 'veggie'],
     ingredients: [
       CatalogIngredient(nameFr: 'Farine', nameEn: 'Flour', qty: 250, unit: 'g'),
       CatalogIngredient(nameFr: 'Lait', nameEn: 'Milk', qty: 350, unit: 'ml'),

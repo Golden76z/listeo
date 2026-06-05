@@ -23,14 +23,14 @@ List<Recipe> seedRecipes() => [
         Item(id: uid(), name: 'Œuf', qty: 2, unit: 'pc'),
         Item(id: uid(), name: 'Sucre', qty: 50, unit: 'g'),
         Item(id: uid(), name: 'Levure', qty: 1, unit: 'pc'),
-      ]),
+      ], tags: ['veggie']),
       Recipe(id: 'r_curry', name: 'Curry de pois chiches', servings: 3, tone: 'curry', items: [
         Item(id: uid(), name: 'Pois chiches', qty: 400, unit: 'g'),
         Item(id: uid(), name: 'Lait de coco', qty: 400, unit: 'ml'),
         Item(id: uid(), name: 'Oignon', qty: 1, unit: 'pc'),
         Item(id: uid(), name: 'Pâte de curry', qty: 2, unit: 'cas'),
         Item(id: uid(), name: 'Épinards', qty: 150, unit: 'g'),
-      ]),
+      ], tags: ['veggie', 'gluten_free', 'lactose_free']),
     ];
 
 /// Seed lists — a stocked weekly list with a recipe folder + loose items,

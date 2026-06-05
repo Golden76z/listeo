@@ -16,9 +16,11 @@ class RecipeDraft {
   String tone;
   List<Item> items;
   List<String> instructions;
-  RecipeDraft({this.name = '', this.servings = 4, this.tone = 'green', List<Item>? items, List<String>? instructions})
+  List<String> tags;
+  RecipeDraft({this.name = '', this.servings = 4, this.tone = 'green', List<Item>? items, List<String>? instructions, List<String>? tags})
       : items = items ?? [],
-        instructions = instructions ?? [];
+        instructions = instructions ?? [],
+        tags = tags ?? [];
 }
 
 /// A premium color selection row for list and recipe accent tones.
@@ -179,6 +181,50 @@ class _RecipeEditorViewState extends State<RecipeEditorView> {
               suffix: ' ${context.t('recipe.servings')}',
               onChange: (v) => setState(() {
                 d.servings = v;
+                widget.onChanged();
+              }),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
+        _label(isFr ? 'Régime alimentaire' : 'Dietary tags'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _TagChip(
+              label: isFr ? 'Végétarien' : 'Vegetarian',
+              active: d.tags.contains('veggie'),
+              onTap: () => setState(() {
+                if (d.tags.contains('veggie')) {
+                  d.tags.remove('veggie');
+                } else {
+                  d.tags.add('veggie');
+                }
+                widget.onChanged();
+              }),
+            ),
+            _TagChip(
+              label: isFr ? 'Sans Gluten' : 'Gluten-Free',
+              active: d.tags.contains('gluten_free'),
+              onTap: () => setState(() {
+                if (d.tags.contains('gluten_free')) {
+                  d.tags.remove('gluten_free');
+                } else {
+                  d.tags.add('gluten_free');
+                }
+                widget.onChanged();
+              }),
+            ),
+            _TagChip(
+              label: isFr ? 'Sans Lactose' : 'Dairy-Free',
+              active: d.tags.contains('lactose_free'),
+              onTap: () => setState(() {
+                if (d.tags.contains('lactose_free')) {
+                  d.tags.remove('lactose_free');
+                } else {
+                  d.tags.add('lactose_free');
+                }
                 widget.onChanged();
               }),
             ),
@@ -505,6 +551,40 @@ class _EditInstructionRowState extends State<_EditInstructionRow> {
             child: const SizedBox(width: 28, height: 28, child: Icon(AppIcons.x, size: 16, color: LoTheme.ink3)),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _TagChip({required this.label, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: LoTheme.fast,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? LoTheme.primarySoft : LoTheme.surface2,
+          borderRadius: BorderRadius.circular(LoTheme.r(0.8)),
+          border: Border.all(
+            color: active ? LoTheme.primaryPress : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: LoTheme.font(
+            size: 13.5,
+            weight: active ? FontWeight.w700 : FontWeight.w500,
+            color: active ? LoTheme.primaryPress : LoTheme.ink2,
+          ),
+        ),
       ),
     );
   }

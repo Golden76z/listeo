@@ -137,6 +137,7 @@ class ShoppingList {
   String tone;
   int createdAt;
   List<Block> blocks;
+  bool useInventory;
 
   ShoppingList({
     required this.id,
@@ -144,6 +145,7 @@ class ShoppingList {
     required this.tone,
     required this.createdAt,
     required this.blocks,
+    this.useInventory = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -152,6 +154,7 @@ class ShoppingList {
         'tone': tone,
         'createdAt': createdAt,
         'blocks': blocks.map((b) => b.toJson()).toList(),
+        'useInventory': useInventory,
       };
 
   factory ShoppingList.fromJson(Map<String, dynamic> j) => ShoppingList(
@@ -162,6 +165,7 @@ class ShoppingList {
         blocks: (j['blocks'] as List)
             .map((e) => Block.fromJson(e as Map<String, dynamic>))
             .toList(),
+        useInventory: j['useInventory'] as bool? ?? false,
       );
 }
 
@@ -172,6 +176,7 @@ class Recipe {
   String tone;
   List<Item> items;
   List<String> instructions;
+  List<String> tags;
 
   Recipe({
     required this.id,
@@ -180,6 +185,7 @@ class Recipe {
     required this.tone,
     required this.items,
     this.instructions = const [],
+    this.tags = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -189,6 +195,7 @@ class Recipe {
         'tone': tone,
         'items': items.map((i) => i.toJson()).toList(),
         'instructions': instructions,
+        'tags': tags,
       };
 
   factory Recipe.fromJson(Map<String, dynamic> j) => Recipe(
@@ -200,6 +207,7 @@ class Recipe {
             .map((e) => Item.fromJson(e as Map<String, dynamic>))
             .toList(),
         instructions: (j['instructions'] as List?)?.map((e) => e as String).toList() ?? const [],
+        tags: (j['tags'] as List?)?.map((e) => e as String).toList() ?? const [],
       );
 }
 
@@ -309,4 +317,103 @@ String relTime(int ts) {
   if (d == 1) return 'hier';
   if (d < 7) return 'il y a $d j';
   return 'il y a ${d ~/ 7} sem';
+}
+
+class ConsolidatedItem {
+  final String name; // display name (canonical case)
+  final String unit; // unit ID
+  final String category; // category/aisle
+  final List<Item> items; // constituent items
+  final List<Block> blocks; // constituent blocks
+
+  ConsolidatedItem({
+    required this.name,
+    required this.unit,
+    required this.category,
+    required this.items,
+    required this.blocks,
+  });
+
+  double get totalQty {
+    return items.fold(0.0, (sum, it) => sum + it.qty);
+  }
+
+  bool get checked => items.every((it) => it.checked);
+}
+
+List<ConsolidatedItem> consolidateItems(List<Block> blocks, {String searchQuery = ''}) {
+  final Map<String, List<({Block block, Item item})>> grouped = {};
+  
+  for (final b in blocks) {
+    for (final it in b.items) {
+      if (searchQuery.isNotEmpty && !it.name.toLowerCase().contains(searchQuery.toLowerCase())) {
+        continue;
+      }
+      
+      final nameLower = it.name.trim().toLowerCase();
+      final unitLower = it.unit.trim().toLowerCase();
+      final key = '$nameLower|$unitLower';
+      
+      grouped.putIfAbsent(key, () => []).add((block: b, item: it));
+    }
+  }
+
+  final List<ConsolidatedItem> consolidated = [];
+  
+  grouped.forEach((key, list) {
+    if (list.isEmpty) return;
+    
+    final canonicalName = list.first.item.name;
+    final unit = list.first.item.unit;
+    
+    String? customCat;
+    for (final pair in list) {
+      if (pair.item.customCategory != null) {
+        customCat = pair.item.customCategory;
+        break;
+      }
+    }
+    final category = customCat ?? getCategoryForProduct(canonicalName);
+    
+    consolidated.add(ConsolidatedItem(
+      name: canonicalName,
+      unit: unit,
+      category: category,
+      items: list.map((e) => e.item).toList(),
+      blocks: list.map((e) => e.block).toList(),
+    ));
+  });
+  
+  return consolidated;
+}
+class InventoryItem {
+  String id;
+  String name;
+  bool inStock;
+  double qty;
+  String unit;
+
+  InventoryItem({
+    required this.id,
+    required this.name,
+    this.inStock = true,
+    this.qty = 1.0,
+    this.unit = 'pc',
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'inStock': inStock,
+        'qty': qty,
+        'unit': unit,
+      };
+
+  factory InventoryItem.fromJson(Map<String, dynamic> j) => InventoryItem(
+        id: j['id'] as String,
+        name: j['name'] as String,
+        inStock: j['inStock'] as bool? ?? true,
+        qty: (j['qty'] as num?)?.toDouble() ?? 1.0,
+        unit: j['unit'] as String? ?? 'pc',
+      );
 }

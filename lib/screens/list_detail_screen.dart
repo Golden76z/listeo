@@ -12,6 +12,7 @@ import '../widgets/primitives.dart';
 import '../widgets/sheets.dart';
 import '../widgets/toast.dart';
 import '../widgets/confetti.dart';
+import 'shopping_trip_screen.dart';
 
 class ListDetailScreen extends StatefulWidget {
   final String listId;
@@ -264,6 +265,29 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                             ),
                           ),
                         ),
+                        if (prog.total > 0) ...[
+                          const SizedBox(width: 4),
+                          Pressable(
+                            scale: 0.85,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ShoppingTripScreen(listId: list.id),
+                                ),
+                              );
+                            },
+                            child: const SizedBox(
+                              width: 38,
+                              height: 38,
+                              child: Icon(
+                                Icons.play_circle_outline_rounded,
+                                size: 22,
+                                color: LoTheme.ink,
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(width: 4),
                         Pressable(
                           scale: 0.85,

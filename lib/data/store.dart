@@ -648,6 +648,60 @@ class AppStore extends ChangeNotifier {
       subtractionLabel: '',
     );
   }
+
+  List<FridgeMatch> getFridgeMatches() {
+    final List<FridgeMatch> matches = [];
+
+    for (final recipe in kCatalogRecipes) {
+      int matchCount = 0;
+      final List<CatalogIngredient> missing = [];
+
+      for (final ing in recipe.ingredients) {
+        final hasFr = isItemInStock(ing.nameFr);
+        final hasEn = isItemInStock(ing.nameEn);
+        if (hasFr || hasEn) {
+          matchCount++;
+        } else {
+          missing.add(ing);
+        }
+      }
+
+      final total = recipe.ingredients.length;
+      final ratio = total > 0 ? matchCount / total : 0.0;
+
+      matches.add(FridgeMatch(
+        recipe: recipe,
+        matchCount: matchCount,
+        totalCount: total,
+        matchRatio: ratio,
+        missingIngredients: missing,
+      ));
+    }
+
+    matches.sort((a, b) {
+      final cmp = b.matchRatio.compareTo(a.matchRatio);
+      if (cmp != 0) return cmp;
+      return b.totalCount.compareTo(a.totalCount);
+    });
+
+    return matches;
+  }
+}
+
+class FridgeMatch {
+  final CatalogRecipe recipe;
+  final int matchCount;
+  final int totalCount;
+  final double matchRatio;
+  final List<CatalogIngredient> missingIngredients;
+
+  const FridgeMatch({
+    required this.recipe,
+    required this.matchCount,
+    required this.totalCount,
+    required this.matchRatio,
+    required this.missingIngredients,
+  });
 }
 
 class InventoryDeduction {

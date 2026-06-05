@@ -12,6 +12,7 @@ import '../widgets/sheets.dart';
 import '../widgets/animations.dart';
 import '../widgets/toast.dart';
 import 'cooking_screen.dart';
+import '../widgets/fridge_roulette_sheet.dart';
 
 class ExploreScreen extends StatefulWidget {
   const ExploreScreen({super.key});
@@ -159,6 +160,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                   },
                 ),
               ),
+              const _FridgeRouletteCard(),
             ],
           ),
         ),
@@ -534,6 +536,75 @@ class _SaveRecipeButton extends StatelessWidget {
           LoToast.show(context, context.t('toast.saved_to_recipes'));
         }
       },
+    );
+  }
+}
+
+class _FridgeRouletteCard extends StatelessWidget {
+  const _FridgeRouletteCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final isFr = store.locale == 'fr';
+    final tn = Tone.of('green');
+
+    return Pressable(
+      scale: 0.98,
+      onTap: () => openFridgeRouletteSheet(context),
+      child: Container(
+        margin: const EdgeInsets.only(top: 12),
+        decoration: BoxDecoration(
+          color: tn.soft,
+          borderRadius: BorderRadius.circular(LoTheme.radius),
+          border: Border.all(color: tn.dot.withValues(alpha: 0.22), width: 1.5),
+          boxShadow: LoTheme.cardShadow,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Row(
+          children: [
+            Container(width: 5, height: 68, color: tn.dot),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: tn.dot.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.auto_awesome_rounded, size: 18, color: LoTheme.primary),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isFr ? 'Videz le frigo !' : 'Clean the Fridge!',
+                            style: LoTheme.font(size: 16.5, weight: FontWeight.w700, letterSpacing: -0.2, color: LoTheme.ink),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            isFr 
+                                ? 'Trouve des recettes avec ce que tu as déjà' 
+                                : 'Find recipes with what you already have',
+                            style: LoTheme.font(size: 13, weight: FontWeight.w500, color: LoTheme.ink2),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(AppIcons.chevronRight, size: 18, color: LoTheme.ink3),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

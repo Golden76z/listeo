@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:listeo/models/models.dart';
 import 'package:listeo/widgets/sheets.dart';
-import 'package:listeo/l10n/l10n.dart';
 import 'package:provider/provider.dart';
 import 'package:listeo/data/store.dart';
 import 'package:shared_preferences/shared_preferences.dart';

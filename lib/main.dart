@@ -35,11 +35,16 @@ class ListeoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: store,
-      child: MaterialApp(
-        title: 'Listeo',
-        debugShowCheckedModeBanner: false,
-        theme: LoTheme.themeData(),
-        home: const RootScaffold(),
+      child: Consumer<AppStore>(
+        builder: (context, store, child) {
+          return MaterialApp(
+            key: ValueKey(store.locale),
+            title: 'Listeo',
+            debugShowCheckedModeBanner: false,
+            theme: LoTheme.themeData(),
+            home: const RootScaffold(),
+          );
+        },
       ),
     );
   }

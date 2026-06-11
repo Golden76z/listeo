@@ -1706,7 +1706,7 @@ void shareList(BuildContext context, ShoppingList list) {
 class _ShareListBody extends StatefulWidget {
   final AppStore store;
   final ShoppingList list;
-  const _ShareListBody({super.key, required this.store, required this.list});
+  const _ShareListBody({required this.store, required this.list});
 
   @override
   State<_ShareListBody> createState() => _ShareListBodyState();

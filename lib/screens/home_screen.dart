@@ -102,7 +102,7 @@ class _ListCard extends StatelessWidget {
                       Row(children: [
                         const Icon(AppIcons.clock, size: 13, color: LoTheme.ink3),
                         const SizedBox(width: 6),
-                        Text(relTime(list.createdAt), style: LoTheme.font(size: 13, weight: FontWeight.w500, color: LoTheme.ink3)),
+                        Text(relTime(list.createdAt, store.locale), style: LoTheme.font(size: 13, weight: FontWeight.w500, color: LoTheme.ink3)),
                         Text('  ·  ${prog.total} ${context.t('btn.add_item')}${prog.total > 1 ? 's' : ''}', style: LoTheme.font(size: 13, weight: FontWeight.w500, color: LoTheme.ink3)),
                       ]),
                     ]),

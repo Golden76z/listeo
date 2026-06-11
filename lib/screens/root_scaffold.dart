@@ -141,7 +141,10 @@ class _BottomNav extends StatelessWidget {
             color: LoTheme.surface.withValues(alpha: 0.88),
             border: const Border(top: BorderSide(color: LoTheme.line)),
           ),
-          padding: EdgeInsets.only(bottom: bottomPad > 0 ? (bottomPad - 8).clamp(8.0, 30.0) : 10),
+          padding: EdgeInsets.only(
+            top: 4,
+            bottom: bottomPad > 0 ? bottomPad : 10,
+          ),
           child: Stack(children: [
             // sliding indicator
             Positioned(
@@ -164,7 +167,7 @@ class _BottomNav extends StatelessWidget {
               }),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: 6),
               child: Row(
                 children: [
                   for (var i = 0; i < tabs.length; i++)

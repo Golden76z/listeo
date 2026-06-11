@@ -355,6 +355,45 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(
             children: [
+              // Quick Actions Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      store.seedFullPantry();
+                      LoToast.show(context, isFr ? 'Garde-manger rempli !' : 'Pantry populated!');
+                    },
+                    icon: const Icon(Icons.flash_on_rounded, size: 16, color: LoTheme.primaryPress),
+                    label: Text(
+                      isFr ? 'Remplir le placard' : 'Fill Pantry',
+                      style: LoTheme.font(size: 13, weight: FontWeight.w700, color: LoTheme.primaryPress),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      store.clearInventory();
+                      LoToast.show(context, isFr ? 'Placard vidé !' : 'Pantry cleared!');
+                    },
+                    icon: const Icon(Icons.delete_sweep_rounded, size: 16, color: LoTheme.ink3),
+                    label: Text(
+                      isFr ? 'Vider' : 'Clear',
+                      style: LoTheme.font(size: 13, weight: FontWeight.w700, color: LoTheme.ink3),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               // Search input
               Container(
                 height: 42,

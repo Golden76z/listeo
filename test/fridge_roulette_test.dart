@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:listeo/data/store.dart';
-import 'package:listeo/data/catalog.dart';
-import 'package:listeo/models/models.dart';
 import 'package:listeo/widgets/fridge_roulette_sheet.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';

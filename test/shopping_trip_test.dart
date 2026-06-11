@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:listeo/data/store.dart';
-import 'package:listeo/models/models.dart';
 import 'package:listeo/screens/shopping_trip_screen.dart';
-import 'package:listeo/widgets/primitives.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -55,7 +53,6 @@ void main() {
 
       // Check first item (Pommes)
       // Checkboxes are inside InkWell / Pressable. Let's find by type and tap
-      final checkboxFinder = find.byType(Pressable);
       // We have multiple Pressables: Wake lock, Exit button, category accordions, checkbox pressables, qty chips
       // Let's find the checkboxes by looking for checked/unchecked structures.
       // Or simply tap the item row by tapping the text 'Pommes' since the InkWell onTap is on the whole row!

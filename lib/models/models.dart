@@ -308,15 +308,16 @@ Progress listProgress(ShoppingList list) {
   return Progress(done, total);
 }
 
-String relTime(int ts) {
+String relTime(int ts, String locale) {
+  final isFr = locale == 'fr';
   final diff = DateTime.now().millisecondsSinceEpoch - ts;
   final h = diff ~/ 3600000;
-  if (h < 1) return "à l'instant";
-  if (h < 24) return 'il y a $h h';
+  if (h < 1) return isFr ? "à l'instant" : "just now";
+  if (h < 24) return isFr ? 'il y a $h h' : '$h h ago';
   final d = h ~/ 24;
-  if (d == 1) return 'hier';
-  if (d < 7) return 'il y a $d j';
-  return 'il y a ${d ~/ 7} sem';
+  if (d == 1) return isFr ? 'hier' : 'yesterday';
+  if (d < 7) return isFr ? 'il y a $d j' : '$d d ago';
+  return isFr ? 'il y a ${d ~/ 7} sem' : '${d ~/ 7} w ago';
 }
 
 class ConsolidatedItem {

@@ -311,6 +311,7 @@ class InlineInput extends StatelessWidget {
   final VoidCallback? onSubmit;
   final FocusNode? focusNode;
   final bool autofocus;
+  final Widget? suffix;
   const InlineInput({
     super.key,
     required this.controller,
@@ -322,6 +323,7 @@ class InlineInput extends StatelessWidget {
     this.onSubmit,
     this.focusNode,
     this.autofocus = false,
+    this.suffix,
   });
 
   @override
@@ -332,22 +334,32 @@ class InlineInput extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(LoTheme.r(0.9))),
       alignment: Alignment.center,
-      child: TextField(
-        controller: controller,
-        focusNode: focusNode,
-        autofocus: autofocus,
-        textAlign: align,
-        keyboardType: keyboardType,
-        onSubmitted: (_) => onSubmit?.call(),
-        textInputAction: onSubmit != null ? TextInputAction.done : TextInputAction.none,
-        cursorColor: LoTheme.primary,
-        style: LoTheme.font(size: 16, weight: FontWeight.w700),
-        decoration: InputDecoration(
-          isCollapsed: true,
-          border: InputBorder.none,
-          hintText: placeholder,
-          hintStyle: LoTheme.font(size: 16, weight: FontWeight.w600, color: LoTheme.ink3),
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              autofocus: autofocus,
+              textAlign: align,
+              keyboardType: keyboardType,
+              onSubmitted: (_) => onSubmit?.call(),
+              textInputAction: onSubmit != null ? TextInputAction.done : TextInputAction.none,
+              cursorColor: LoTheme.primary,
+              style: LoTheme.font(size: 16, weight: FontWeight.w700),
+              decoration: InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                hintText: placeholder,
+                hintStyle: LoTheme.font(size: 16, weight: FontWeight.w600, color: LoTheme.ink3),
+              ),
+            ),
+          ),
+          if (suffix != null) ...[
+            const SizedBox(width: 8),
+            suffix!,
+          ],
+        ],
       ),
     );
   }

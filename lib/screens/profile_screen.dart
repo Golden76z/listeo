@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/store.dart';
 import '../models/models.dart';
+import '../models/unit.dart';
 import '../theme/app_theme.dart';
 import '../theme/icons.dart';
 import '../l10n/l10n.dart';
@@ -22,6 +23,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   final _searchCtrl = TextEditingController();
   final _addCtrl = TextEditingController();
   String _searchQuery = '';
+  String _selectedCategory = 'All';
 
   @override
   void initState() {
@@ -204,7 +206,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       children: [
         Expanded(
           child: ListView.builder(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, hasAnyMeals ? 16 : 60 + MediaQuery.of(context).padding.bottom),
+            padding: EdgeInsets.fromLTRB(16, 12, 16, hasAnyMeals ? 90 + MediaQuery.of(context).padding.bottom : 60 + MediaQuery.of(context).padding.bottom),
             physics: const BouncingScrollPhysics(),
             itemCount: constDays.length,
             itemBuilder: (c, i) {
@@ -228,7 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               16,
               12,
               16,
-              12 + 32 + MediaQuery.of(context).padding.bottom,
+              12 + MediaQuery.of(context).padding.bottom,
             ),
             decoration: BoxDecoration(
               color: LoTheme.bg.withValues(alpha: 0.95),
@@ -309,9 +311,41 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   // ── Pantry Inventory View ───────────────────────────────────
   Widget _buildInventoryView(BuildContext context, AppStore store) {
     final isFr = store.locale == 'fr';
+    
+    // Get count metrics
+    final totalCount = store.inventory.length;
+    final inStockCount = store.inventory.where((it) => it.inStock).length;
+    final outOfStockCount = totalCount - inStockCount;
+
+    // Categories list for chips filtering
+    final categories = [
+      'All',
+      'Fruits & Légumes',
+      'Produits Laitiers & Œufs',
+      'Boulangerie',
+      'Boucherie & Poissonnerie',
+      'Épicerie',
+      'Boissons',
+      'Hygiène & Entretien',
+      'En vrac',
+    ];
+
+    // Filter items
     final filtered = store.inventory.where((it) {
-      if (_searchQuery.isEmpty) return true;
-      return it.name.toLowerCase().contains(_searchQuery.toLowerCase());
+      // 1. Text search
+      if (_searchQuery.isNotEmpty) {
+        if (!it.name.toLowerCase().contains(_searchQuery.toLowerCase())) {
+          return false;
+        }
+      }
+      // 2. Category selection
+      if (_selectedCategory != 'All') {
+        final itemCategory = getCategoryForProduct(it.name);
+        if (itemCategory != _selectedCategory) {
+          return false;
+        }
+      }
+      return true;
     }).toList();
 
     return Column(
@@ -356,7 +390,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 ),
               ),
               const SizedBox(height: 10),
-              // Add input
+              // Add input with Database catalog picker suffix
               Container(
                 height: 42,
                 padding: const EdgeInsets.only(left: 12, right: 4),
@@ -383,11 +417,52 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         onSubmitted: (_) => _addInventoryItem(store),
                       ),
                     ),
-                    LoButton(
-                      label: isFr ? 'Ajouter' : 'Add',
-                      variant: BtnVariant.primary,
-                      small: true,
+                    Pressable(
+                      scale: 0.88,
+                      onTap: () {
+                        FocusScope.of(context).unfocus();
+                        openDatabaseItemsSheet(context, (selected) {
+                          final defaultUnit = getProductDefaultUnit(selected);
+                          store.addInventoryItem(selected, unit: defaultUnit);
+                          LoToast.show(context, isFr ? '$selected ajouté !' : '$selected added!');
+                        });
+                      },
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: const BoxDecoration(
+                          color: LoTheme.surface2,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.storage_rounded,
+                          size: 16,
+                          color: LoTheme.primaryPress,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Pressable(
+                      scale: 0.95,
                       onTap: () => _addInventoryItem(store),
+                      child: Container(
+                        height: 32,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: LoTheme.primary,
+                          borderRadius: BorderRadius.circular(LoTheme.r(0.95)),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          isFr ? 'Ajouter' : 'Add',
+                          style: LoTheme.font(
+                            size: 13,
+                            weight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -395,6 +470,152 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             ],
           ),
         ),
+
+        // Horizontal Category Chips
+        SizedBox(
+          height: 38,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            physics: const BouncingScrollPhysics(),
+            itemCount: categories.length,
+            itemBuilder: (context, index) {
+              final cat = categories[index];
+              final isSelected = _selectedCategory == cat;
+              final displayName = cat == 'All' ? context.t('filter.all') : context.categoryName(cat);
+
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Pressable(
+                  scale: 0.95,
+                  onTap: () {
+                    setState(() {
+                      _selectedCategory = cat;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? LoTheme.primaryPress : LoTheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected ? LoTheme.primaryPress : LoTheme.line,
+                      ),
+                      boxShadow: isSelected ? null : LoTheme.cardShadow,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (cat != 'All') ...[
+                          Icon(
+                            _getCategoryIcon(cat),
+                            size: 13,
+                            color: isSelected ? Colors.white : LoTheme.ink3,
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(
+                          displayName,
+                          style: LoTheme.font(
+                            size: 12.5,
+                            weight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                            color: isSelected ? Colors.white : LoTheme.ink2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 6),
+
+        // Pantry Summary Card
+        if (store.inventory.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: LoTheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: LoTheme.line),
+                boxShadow: LoTheme.cardShadow,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isFr ? 'Stock de votre garde-manger' : 'Pantry Stock Status',
+                          style: LoTheme.font(size: 12.5, weight: FontWeight.w700, color: LoTheme.ink2),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              '$inStockCount / $totalCount',
+                              style: LoTheme.font(size: 15, weight: FontWeight.w800, color: LoTheme.primaryPress),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              isFr ? 'articles en stock' : 'items in stock',
+                              style: LoTheme.font(size: 12.5, weight: FontWeight.w600, color: LoTheme.ink3),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: totalCount == 0 ? 0.0 : inStockCount / totalCount,
+                            backgroundColor: LoTheme.surface2,
+                            valueColor: const AlwaysStoppedAnimation<Color>(LoTheme.primaryPress),
+                            minHeight: 5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (outOfStockCount > 0) ...[
+                    const SizedBox(width: 12),
+                    Pressable(
+                      scale: 0.92,
+                      onTap: () => _openAddNeededToListSheet(context, store),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: LoTheme.primarySoft,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: LoTheme.primaryPress.withAlpha(50)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.add_shopping_cart_rounded, size: 14, color: LoTheme.primaryPress),
+                            const SizedBox(width: 6),
+                            Text(
+                              isFr ? 'Acheter les manquants' : 'Add needed',
+                              style: LoTheme.font(
+                                size: 12,
+                                weight: FontWeight.w700,
+                                color: LoTheme.primaryPress,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
 
         // Inventory Items list
         Expanded(
@@ -441,6 +662,152 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         ),
       ],
     );
+  }
+
+  void _openAddNeededToListSheet(BuildContext context, AppStore store) {
+    final isFr = store.locale == 'fr';
+    final neededItems = store.inventory.where((it) => !it.inStock).toList();
+    if (neededItems.isEmpty) return;
+
+    showLoSheet(
+      context,
+      title: isFr ? "ajouter les articles manquants" : "add needed items",
+      builder: (ctx) {
+        if (store.lists.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isFr ? "Aucune liste de courses active" : "No active shopping lists",
+                  style: LoTheme.font(size: 15, weight: FontWeight.w700, color: LoTheme.ink2),
+                ),
+                const SizedBox(height: 14),
+                LoButton(
+                  label: isFr ? "Créer une liste" : "Create a list",
+                  variant: BtnVariant.primary,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    openCreateList(context);
+                  },
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                isFr
+                    ? "Sélectionnez une liste pour y ajouter ${neededItems.length} article(s) :"
+                    : "Select a list to add ${neededItems.length} item(s):",
+                style: LoTheme.font(size: 14, weight: FontWeight.w600, color: LoTheme.ink2),
+              ),
+            ),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.4,
+              ),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: store.lists.length,
+                itemBuilder: (c, idx) {
+                  final list = store.lists[idx];
+                  final tn = Tone.of(list.tone);
+                  
+                  int itemCount = 0;
+                  for (final b in list.blocks) {
+                    itemCount += b.items.length;
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Pressable(
+                      scale: 0.98,
+                      onTap: () {
+                        for (final it in neededItems) {
+                          store.addLooseItem(
+                            list.id,
+                            name: it.name,
+                            qty: it.qty > 0 ? it.qty : 1.0,
+                            unit: it.unit,
+                          );
+                        }
+                        Navigator.pop(ctx);
+                        LoToast.show(
+                          context,
+                          isFr
+                              ? "${neededItems.length} article(s) ajouté(s) à ${list.name} !"
+                              : "${neededItems.length} item(s) added to ${list.name}!",
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: LoTheme.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: LoTheme.line),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: tn.dot,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                list.name,
+                                style: LoTheme.font(size: 14.5, weight: FontWeight.w700, color: LoTheme.ink),
+                              ),
+                            ),
+                            Text(
+                              isFr ? "$itemCount article(s)" : "$itemCount item(s)",
+                              style: LoTheme.font(size: 13, weight: FontWeight.w600, color: LoTheme.ink3),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  IconData _getCategoryIcon(String cat) {
+    switch (cat) {
+      case 'Fruits & Légumes':
+        return Icons.local_florist_rounded;
+      case 'Produits Laitiers & Œufs':
+        return Icons.egg_alt_rounded;
+      case 'Boulangerie':
+        return Icons.bakery_dining_rounded;
+      case 'Boucherie & Poissonnerie':
+        return Icons.kebab_dining_rounded;
+      case 'Épicerie':
+        return Icons.dinner_dining_rounded;
+      case 'Boissons':
+        return Icons.local_cafe_rounded;
+      case 'Hygiène & Entretien':
+        return Icons.clean_hands_rounded;
+      default:
+        return Icons.shopping_basket_rounded;
+    }
   }
 }
 
@@ -600,6 +967,28 @@ class _InventoryItemRow extends StatelessWidget {
 
   const _InventoryItemRow({required this.item, required this.store});
 
+  double _stepQty(double current, String unit, int direction) {
+    double step = 1.0;
+    switch (unit.toLowerCase()) {
+      case 'g':
+        step = 50.0;
+        break;
+      case 'kg':
+        step = 0.5;
+        break;
+      case 'ml':
+        step = 100.0;
+        break;
+      case 'l':
+        step = 0.5;
+        break;
+      default:
+        step = 1.0;
+    }
+    final next = current + (step * direction);
+    return next < 0.0 ? 0.0 : next;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isFr = store.locale == 'fr';
@@ -640,30 +1029,13 @@ class _InventoryItemRow extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            item.name,
-                            style: LoTheme.font(
-                              size: 15.5,
-                              weight: FontWeight.w700,
-                              color: item.inStock ? LoTheme.ink : LoTheme.ink3,
-                            ),
-                          ),
-                        ),
-                        if (item.qty > 0) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            '(${_formatNum(item.qty)} ${item.unit})',
-                            style: LoTheme.font(
-                              size: 13,
-                              weight: FontWeight.w600,
-                              color: LoTheme.ink3,
-                            ),
-                          ),
-                        ],
-                      ],
+                    Text(
+                      item.name,
+                      style: LoTheme.font(
+                        size: 15,
+                        weight: FontWeight.w700,
+                        color: item.inStock ? LoTheme.ink : LoTheme.ink3,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -679,6 +1051,58 @@ class _InventoryItemRow extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
+              // Interactive Stepper
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Pressable(
+                    scale: 0.85,
+                    onTap: () {
+                      final newQty = _stepQty(item.qty, item.unit, -1);
+                      store.updateInventoryItem(item.id, qty: newQty);
+                    },
+                    child: Container(
+                      width: 26,
+                      height: 26,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: LoTheme.surface2,
+                      ),
+                      child: const Icon(AppIcons.minus, size: 12, color: LoTheme.ink2),
+                    ),
+                  ),
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 52),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${_formatNum(item.qty)} ${item.unit}',
+                      style: LoTheme.font(
+                        size: 12.5,
+                        weight: FontWeight.w700,
+                        color: LoTheme.ink2,
+                      ),
+                    ),
+                  ),
+                  Pressable(
+                    scale: 0.85,
+                    onTap: () {
+                      final newQty = _stepQty(item.qty, item.unit, 1);
+                      store.updateInventoryItem(item.id, qty: newQty);
+                    },
+                    child: Container(
+                      width: 26,
+                      height: 26,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: LoTheme.surface2,
+                      ),
+                      child: const Icon(AppIcons.plus, size: 12, color: LoTheme.ink2),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 12),
               // Rename button
               Pressable(
                 scale: 0.88,

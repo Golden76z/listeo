@@ -50,13 +50,24 @@ void main() {
       await store.init();
       store.locale = 'fr';
 
+      // Seed 100% match ingredients for Carbonara so roulette wheel has items
+      store.inventory.clear();
+      store.addInventoryItem('Spaghetti', inStock: true);
+      store.addInventoryItem('Lardons', inStock: true);
+      store.addInventoryItem('Oeufs', inStock: true);
+      store.addInventoryItem('Parmesan', inStock: true);
+      store.addInventoryItem('Sel', inStock: true);
+      store.addInventoryItem('Poivre', inStock: true);
+
       // Build our Widget under ChangeNotifierProvider
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: ChangeNotifierProvider<AppStore>.value(
               value: store,
-              child: const FridgeRouletteBody(),
+              child: const SingleChildScrollView(
+                child: FridgeRouletteBody(),
+              ),
             ),
           ),
         ),

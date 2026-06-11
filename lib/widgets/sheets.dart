@@ -15,14 +15,20 @@ import 'nav.dart';
 import '../screens/cooking_screen.dart';
 
 // ── Sheet shell ─────────────────────────────────────────────
-Future<T?> showLoSheet<T>(BuildContext context, {String? title, required WidgetBuilder builder}) {
+Future<T?> showLoSheet<T>(
+  BuildContext context, {
+  String? title,
+  double? maxHeight,
+  double? minHeight,
+  required WidgetBuilder builder,
+}) {
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x52191D14),
     builder: (ctx) {
-      return _SheetShell(title: title, child: Builder(builder: builder));
+      return _SheetShell(title: title, maxHeight: maxHeight, minHeight: minHeight, child: Builder(builder: builder));
     },
   );
 }
@@ -30,17 +36,23 @@ Future<T?> showLoSheet<T>(BuildContext context, {String? title, required WidgetB
 class _SheetShell extends StatelessWidget {
   final String? title;
   final Widget child;
-  const _SheetShell({this.title, required this.child});
+  final double? maxHeight;
+  final double? minHeight;
+  const _SheetShell({this.title, required this.child, this.maxHeight, this.minHeight});
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final maxH = maxHeight ?? (MediaQuery.of(context).size.height * 0.88);
     return AnimatedPadding(
       duration: const Duration(milliseconds: 200),
       curve: LoTheme.ease,
       padding: EdgeInsets.only(bottom: bottomInset),
       child: Container(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.88),
+        constraints: BoxConstraints(
+          minHeight: minHeight ?? 0,
+          maxHeight: maxH,
+        ),
         decoration: const BoxDecoration(
           color: LoTheme.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
@@ -75,7 +87,12 @@ class _SheetShell extends StatelessWidget {
               ),
             Flexible(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  4,
+                  20,
+                  8 + MediaQuery.of(context).padding.bottom,
+                ),
                 child: child,
               ),
             ),
@@ -89,7 +106,13 @@ class _SheetShell extends StatelessWidget {
 // ── Create list ─────────────────────────────────────────────
 void openCreateList(BuildContext context) {
   final store = context.read<AppStore>();
-  showLoSheet(context, title: 'nouvelle liste', builder: (ctx) => _CreateListBody(store: store));
+  showLoSheet(
+    context,
+    title: 'nouvelle liste',
+    minHeight: MediaQuery.of(context).size.height * 0.85,
+    maxHeight: MediaQuery.of(context).size.height * 0.94,
+    builder: (ctx) => _CreateListBody(store: store),
+  );
 }
 
 class _CreateListBody extends StatefulWidget {
@@ -103,6 +126,7 @@ class _CreateListBodyState extends State<_CreateListBody> {
   final _name = TextEditingController();
   final _sel = <String>{};
   late String _tone;
+  bool _expanded = false;
 
   @override
   void initState() {
@@ -161,46 +185,120 @@ class _CreateListBodyState extends State<_CreateListBody> {
           TextSpan(text: '· ${context.t('list.editor.optional')}', style: LoTheme.font(size: 12.5, weight: FontWeight.w500, color: LoTheme.ink3)),
         ])),
       ),
-      ...store.recipes.map((r) {
-        final on = _sel.contains(r.id);
-        final tn = Tone.of(r.tone);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Pressable(
+      GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 1.85,
+        ),
+        itemCount: store.recipes.length > 3
+            ? (_expanded ? store.recipes.length + 1 : 4)
+            : store.recipes.length,
+        itemBuilder: (context, index) {
+          final recipes = store.recipes;
+          final showExpandButton = recipes.length > 3;
+          final displayCount = showExpandButton && !_expanded ? 4 : recipes.length + 1;
+
+          if (showExpandButton && index == displayCount - 1) {
+            return Pressable(
+              scale: 0.95,
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: LoTheme.surface2,
+                  borderRadius: BorderRadius.circular(LoTheme.r(0.85)),
+                  border: Border.all(color: LoTheme.line, width: 1.5),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                      color: LoTheme.primary,
+                      size: 24,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _expanded
+                          ? (isFr ? 'Réduire' : 'Show less')
+                          : (isFr ? 'Voir plus' : 'Show more'),
+                      style: LoTheme.font(
+                        size: 13,
+                        weight: FontWeight.w700,
+                        color: LoTheme.primaryPress,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final r = recipes[index];
+          final on = _sel.contains(r.id);
+          final tn = Tone.of(r.tone);
+          return Pressable(
+            scale: 0.95,
             onTap: () => setState(() => on ? _sel.remove(r.id) : _sel.add(r.id)),
             child: AnimatedContainer(
               duration: LoTheme.fast,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 color: on ? LoTheme.primarySoft : LoTheme.surface2,
                 borderRadius: BorderRadius.circular(LoTheme.r(0.85)),
                 border: Border.all(color: on ? LoTheme.primary : Colors.transparent, width: 2),
               ),
-              child: Row(children: [
-                _toneIcon(tn, 34, 17),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(r.name, style: LoTheme.font(size: 15, weight: FontWeight.w700)),
-                    Text('${r.servings} ${context.t('recipe.servings')}', style: LoTheme.font(size: 12.5, weight: FontWeight.w600, color: LoTheme.ink3)),
-                  ]),
-                ),
-                AnimatedContainer(
-                  duration: LoTheme.fast,
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: on ? LoTheme.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    border: on ? null : Border.all(color: LoTheme.lineStrong, width: 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _toneIcon(tn, 24, 12),
+                      AnimatedContainer(
+                        duration: LoTheme.fast,
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: on ? LoTheme.primary : Colors.transparent,
+                          borderRadius: BorderRadius.circular(5),
+                          border: on ? null : Border.all(color: LoTheme.lineStrong, width: 2),
+                        ),
+                        child: on ? const Icon(AppIcons.check, size: 10, color: Colors.white) : null,
+                      ),
+                    ],
                   ),
-                  child: on ? const Icon(AppIcons.check, size: 14, color: Colors.white) : null,
-                ),
-              ]),
+                  const SizedBox(height: 4),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          r.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: LoTheme.font(size: 13, weight: FontWeight.w700, height: 1.15),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          '${r.servings} ${context.t('recipe.servings')}',
+                          style: LoTheme.font(size: 11, weight: FontWeight.w600, color: LoTheme.ink3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      }),
+          );
+        },
+      ),
       const SizedBox(height: 18),
       LoButton(
         label: isFr
@@ -292,11 +390,49 @@ class _AddItemBodyState extends State<_AddItemBody> {
     super.dispose();
   }
 
+  void _showDatabaseItems() {
+    _focus.unfocus();
+    final isFr = widget.store.locale == 'fr';
+    showLoSheet(
+      context,
+      title: isFr ? 'catalogue des articles' : 'product catalog',
+      maxHeight: MediaQuery.of(context).size.height * 0.9,
+      builder: (ctx) => _DatabaseItemsSheet(
+        onSelect: (name) {
+          setState(() {
+            _name.text = name;
+            final defUnit = kProductDefaultUnits[name];
+            if (defUnit != null) {
+              _unit = defUnit;
+            }
+          });
+          Navigator.pop(ctx);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _focus.requestFocus();
+          });
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        Expanded(child: InlineInput(controller: _name, focusNode: _focus, autofocus: true, placeholder: 'ex. Tomates', onSubmit: _add)),
+        Expanded(
+          child: InlineInput(
+            controller: _name,
+            focusNode: _focus,
+            autofocus: true,
+            placeholder: 'ex. Tomates',
+            onSubmit: _add,
+            suffix: Pressable(
+              scale: 0.88,
+              onTap: _showDatabaseItems,
+              child: const Icon(Icons.storage_rounded, color: LoTheme.ink3, size: 20),
+            ),
+          ),
+        ),
         const SizedBox(width: 10),
         InlineInput(controller: _qty, width: 64, align: TextAlign.center, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
       ]),
@@ -2161,6 +2297,183 @@ class _DietaryFilterSheetBodyState extends State<_DietaryFilterSheetBody> {
           ),
       ],
     );
+  }
+}
+
+// ── Database / Catalog Items Bottom Sheet ────────────────────
+void openDatabaseItemsSheet(BuildContext context, ValueChanged<String> onSelect) {
+  final store = context.read<AppStore>();
+  showLoSheet(
+    context,
+    title: store.locale == 'fr' ? "catalogue produits" : "product catalog",
+    minHeight: MediaQuery.of(context).size.height * 0.85,
+    maxHeight: MediaQuery.of(context).size.height * 0.94,
+    builder: (ctx) => _DatabaseItemsSheet(onSelect: (val) {
+      onSelect(val);
+      Navigator.pop(ctx);
+    }),
+  );
+}
+
+class _DatabaseItemsSheet extends StatefulWidget {
+  final ValueChanged<String> onSelect;
+  const _DatabaseItemsSheet({required this.onSelect});
+
+  @override
+  State<_DatabaseItemsSheet> createState() => _DatabaseItemsSheetState();
+}
+
+class _DatabaseItemsSheetState extends State<_DatabaseItemsSheet> {
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl.addListener(() {
+      setState(() {
+        _searchQuery = _searchCtrl.text.trim().toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = context.watch<AppStore>();
+    final isFr = store.locale == 'fr';
+
+    // Unique products from the database
+    final allProducts = kProductCategories.keys.toList()..sort();
+
+    // Filter by search query
+    final filtered = _searchQuery.isEmpty
+        ? allProducts
+        : allProducts.where((p) => p.toLowerCase().contains(_searchQuery)).toList();
+
+    // Group by category
+    final Map<String, List<String>> groups = {};
+    for (final p in filtered) {
+      final cat = getCategoryForProduct(p);
+      groups.putIfAbsent(cat, () => []).add(p);
+    }
+
+    // Sort categories using standard order
+    final order = [
+      'Fruits & Légumes',
+      'Produits Laitiers & Œufs',
+      'Boulangerie',
+      'Boucherie & Poissonnerie',
+      'Épicerie',
+      'Boissons',
+      'Hygiène & Entretien',
+      'En vrac',
+    ];
+
+    final sortedCats = groups.keys.toList()
+      ..sort((a, b) {
+        final idxA = order.indexOf(a);
+        final idxB = order.indexOf(b);
+        if (idxA != -1 && idxB != -1) return idxA.compareTo(idxB);
+        if (idxA != -1) return -1;
+        if (idxB != -1) return 1;
+        return a.compareTo(b);
+      });
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LoTextField(
+          controller: _searchCtrl,
+          placeholder: isFr ? 'Rechercher un article...' : 'Search an item...',
+          autoFocus: false,
+        ),
+        const SizedBox(height: 12),
+        if (filtered.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: Center(
+              child: Text(
+                isFr ? 'Aucun article trouvé' : 'No items found',
+                style: LoTheme.font(size: 15, color: LoTheme.ink3, weight: FontWeight.w600),
+              ),
+            ),
+          )
+        else
+          ...sortedCats.map((cat) {
+            final displayName = context.categoryName(cat);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 16, 4, 10),
+                  child: Row(
+                    children: [
+                      Icon(_getCategoryIcon(cat), size: 16, color: LoTheme.ink3),
+                      const SizedBox(width: 8),
+                      Text(
+                        displayName.toUpperCase(),
+                        style: LoTheme.font(
+                          size: 12,
+                          weight: FontWeight.w700,
+                          color: LoTheme.ink3,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: groups[cat]!.map((p) {
+                    return Pressable(
+                      onTap: () => widget.onSelect(p),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: LoTheme.surface2,
+                          borderRadius: BorderRadius.circular(LoTheme.r(0.8)),
+                        ),
+                        child: Text(
+                          p,
+                          style: LoTheme.font(size: 13.5, weight: FontWeight.w600, color: LoTheme.ink2),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            );
+          }),
+      ],
+    );
+  }
+
+  IconData _getCategoryIcon(String cat) {
+    switch (cat) {
+      case 'Fruits & Légumes':
+        return Icons.local_florist_rounded;
+      case 'Produits Laitiers & Œufs':
+        return Icons.egg_alt_rounded;
+      case 'Boulangerie':
+        return Icons.bakery_dining_rounded;
+      case 'Boucherie & Poissonnerie':
+        return Icons.kebab_dining_rounded;
+      case 'Épicerie':
+        return Icons.dinner_dining_rounded;
+      case 'Boissons':
+        return Icons.local_cafe_rounded;
+      case 'Hygiène & Entretien':
+        return Icons.clean_hands_rounded;
+      default:
+        return AppIcons.shoppingCart;
+    }
   }
 }
 

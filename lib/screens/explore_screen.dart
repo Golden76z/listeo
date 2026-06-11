@@ -468,6 +468,8 @@ class _CatalogDetailBodyState extends State<_CatalogDetailBody> {
         return Icons.dinner_dining_rounded;
       case 'Boissons':
         return Icons.local_cafe_rounded;
+      case 'Hygiène & Entretien':
+        return Icons.clean_hands_rounded;
       default:
         return AppIcons.shoppingCart;
     }
@@ -487,6 +489,8 @@ class _CatalogDetailBodyState extends State<_CatalogDetailBody> {
         return context.t('cat.grocery');
       case 'Boissons':
         return context.t('cat.drinks');
+      case 'Hygiène & Entretien':
+        return context.t('cat.cleaning');
       default:
         return context.t('cat.bulk');
     }
@@ -547,23 +551,34 @@ class _FridgeRouletteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.watch<AppStore>();
     final isFr = store.locale == 'fr';
+    
+    final matches = store.getFridgeMatches();
+    final has100PercentMatches = matches.any((m) => m.matchRatio == 1.0);
+    
     final tn = Tone.of('green');
 
     return Pressable(
-      scale: 0.98,
-      onTap: () => openFridgeRouletteSheet(context),
+      scale: has100PercentMatches ? 0.98 : 1.0,
+      onTap: has100PercentMatches ? () => openFridgeRouletteSheet(context) : null,
       child: Container(
         margin: const EdgeInsets.only(top: 12),
         decoration: BoxDecoration(
-          color: tn.soft,
+          color: has100PercentMatches ? tn.soft : LoTheme.surface2,
           borderRadius: BorderRadius.circular(LoTheme.radius),
-          border: Border.all(color: tn.dot.withValues(alpha: 0.22), width: 1.5),
-          boxShadow: LoTheme.cardShadow,
+          border: Border.all(
+            color: has100PercentMatches ? tn.dot.withValues(alpha: 0.22) : LoTheme.line,
+            width: 1.5,
+          ),
+          boxShadow: has100PercentMatches ? LoTheme.cardShadow : null,
         ),
         clipBehavior: Clip.antiAlias,
         child: Row(
           children: [
-            Container(width: 5, height: 68, color: tn.dot),
+            Container(
+              width: 5,
+              height: 68,
+              color: has100PercentMatches ? tn.dot : LoTheme.lineStrong,
+            ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -573,10 +588,16 @@ class _FridgeRouletteCard extends StatelessWidget {
                       width: 38,
                       height: 38,
                       decoration: BoxDecoration(
-                        color: tn.dot.withValues(alpha: 0.15),
+                        color: has100PercentMatches 
+                            ? tn.dot.withValues(alpha: 0.15) 
+                            : LoTheme.line,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.auto_awesome_rounded, size: 18, color: LoTheme.primary),
+                      child: Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 18,
+                        color: has100PercentMatches ? LoTheme.primary : LoTheme.ink3,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -585,19 +606,33 @@ class _FridgeRouletteCard extends StatelessWidget {
                         children: [
                           Text(
                             isFr ? 'Videz le frigo !' : 'Clean the Fridge!',
-                            style: LoTheme.font(size: 16.5, weight: FontWeight.w700, letterSpacing: -0.2, color: LoTheme.ink),
+                            style: LoTheme.font(
+                              size: 16.5,
+                              weight: FontWeight.w700,
+                              letterSpacing: -0.2,
+                              color: has100PercentMatches ? LoTheme.ink : LoTheme.ink3,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            isFr 
-                                ? 'Trouve des recettes avec ce que tu as déjà' 
-                                : 'Find recipes with what you already have',
-                            style: LoTheme.font(size: 13, weight: FontWeight.w500, color: LoTheme.ink2),
+                            has100PercentMatches
+                                ? (isFr 
+                                    ? 'Trouve des recettes avec ce que tu as déjà' 
+                                    : 'Find recipes with what you already have')
+                                : (isFr
+                                    ? 'Aucune recette à 100% de tes ingrédients'
+                                    : 'No recipes with 100% of your ingredients'),
+                            style: LoTheme.font(
+                              size: 13,
+                              weight: FontWeight.w500,
+                              color: has100PercentMatches ? LoTheme.ink2 : LoTheme.ink3,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(AppIcons.chevronRight, size: 18, color: LoTheme.ink3),
+                    if (has100PercentMatches)
+                      const Icon(AppIcons.chevronRight, size: 18, color: LoTheme.ink3),
                   ],
                 ),
               ),

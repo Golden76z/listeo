@@ -56,8 +56,9 @@ class _RootScaffoldState extends State<RootScaffold> {
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
-        systemNavigationBarColor: Color(0xFFFFFFFF),
+        systemNavigationBarColor: Colors.transparent,
         systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarContrastEnforced: false,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
@@ -140,7 +141,7 @@ class _BottomNav extends StatelessWidget {
             color: LoTheme.surface.withValues(alpha: 0.88),
             border: const Border(top: BorderSide(color: LoTheme.line)),
           ),
-          padding: EdgeInsets.only(top: 10, bottom: bottomPad > 0 ? bottomPad : 14),
+          padding: EdgeInsets.only(bottom: bottomPad > 0 ? (bottomPad - 8).clamp(8.0, 30.0) : 10),
           child: Stack(children: [
             // sliding indicator
             Positioned(
@@ -162,24 +163,27 @@ class _BottomNav extends StatelessWidget {
                 );
               }),
             ),
-            Row(
-              children: [
-                for (var i = 0; i < tabs.length; i++)
-                  Expanded(
-                    child: Pressable(
-                      scale: 0.92,
-                      onTap: () => onTap(i),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(tabs[i].icon, size: 23, color: _lerp(i)),
-                          const SizedBox(height: 4),
-                          Text(tabs[i].label, style: LoTheme.font(size: 11, weight: FontWeight.w700, color: _lerp(i), letterSpacing: 0.2)),
-                        ]),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  for (var i = 0; i < tabs.length; i++)
+                    Expanded(
+                      child: Pressable(
+                        scale: 0.92,
+                        onTap: () => onTap(i),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(tabs[i].icon, size: 23, color: _lerp(i)),
+                            const SizedBox(height: 4),
+                            Text(tabs[i].label, style: LoTheme.font(size: 11, weight: FontWeight.w700, color: _lerp(i), letterSpacing: 0.2)),
+                          ]),
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ]),
         ),

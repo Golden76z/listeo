@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../data/store.dart';
 import '../data/catalog.dart';
-import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../theme/icons.dart';
 import '../widgets/primitives.dart';
@@ -62,9 +61,10 @@ class _FridgeRouletteBodyState extends State<FridgeRouletteBody> with SingleTick
   void _loadMatches() {
     final store = context.read<AppStore>();
     final allMatches = store.getFridgeMatches();
+    final hundredPercentMatches = allMatches.where((m) => m.matchRatio == 1.0).toList();
     // Use the top 6 matches (or fewer if catalog is small)
     setState(() {
-      _topMatches = allMatches.take(math.min(6, allMatches.length)).toList();
+      _topMatches = hundredPercentMatches.take(math.min(6, hundredPercentMatches.length)).toList();
     });
   }
 
@@ -120,18 +120,17 @@ class _FridgeRouletteBodyState extends State<FridgeRouletteBody> with SingleTick
 
     // Segments colors mapping
     final colors = [
-      Tone.of('green').dot,
-      Tone.of('yellow').dot,
-      Tone.of('curry').dot,
-      Tone.of('tomate').dot,
-      Tone.of('salade').dot,
-      Tone.of('sucre').dot,
+      Tone.of('green').soft,
+      Tone.of('yellow').soft,
+      Tone.of('curry').soft,
+      Tone.of('tomate').soft,
+      Tone.of('salade').soft,
+      Tone.of('sucre').soft,
     ].sublist(0, _topMatches.length);
 
     final selectedMatch = _selectedIndex >= 0 ? _topMatches[_selectedIndex] : null;
 
-    return SingleChildScrollView(
-      child: Column(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -243,9 +242,8 @@ class _FridgeRouletteBodyState extends State<FridgeRouletteBody> with SingleTick
             ],
           ),
         ],
-        const SizedBox(height: 10),
+        const SizedBox(height: 30),
       ],
-    ),
     );
   }
 }
@@ -276,7 +274,7 @@ class _RoulettePainter extends CustomPainter {
 
     // Dividers
     final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.5)
+      ..color = LoTheme.lineStrong
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 

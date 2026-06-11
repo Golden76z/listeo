@@ -91,6 +91,7 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
         'Boucherie & Poissonnerie',
         'Épicerie',
         'Boissons',
+        'Hygiène & Entretien',
         'En vrac',
       ];
 
@@ -215,11 +216,31 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
                                   ),
                                 ),
                               ),
-                              if (_searchQuery.isNotEmpty)
+                              if (_searchQuery.isNotEmpty) ...[
                                 GestureDetector(
                                   onTap: () => _searchCtrl.clear(),
                                   child: const Icon(AppIcons.x, size: 16, color: LoTheme.ink2),
                                 ),
+                                const SizedBox(width: 8),
+                              ],
+                              Pressable(
+                                scale: 0.85,
+                                onTap: () {
+                                  openDatabaseItemsSheet(context, (selected) {
+                                    final defUnit = kProductDefaultUnits[selected] ?? 'pc';
+                                    store.addLooseItem(list.id, name: selected, qty: 1, unit: defUnit);
+                                    LoToast.show(
+                                      context,
+                                      isFr ? '$selected ajouté' : 'Added $selected',
+                                    );
+                                  });
+                                },
+                                child: const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: Icon(Icons.storage_rounded, color: LoTheme.ink3, size: 18),
+                                ),
+                              ),
                             ]),
                           ),
                         ),
@@ -410,68 +431,75 @@ class _ItemRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(children: [
-          LoCheckbox(checked: item.checked, onToggle: () => store.toggleItem(list.id, block.id, item.id)),
-          const SizedBox(width: 13),
           Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => store.toggleItem(list.id, block.id, item.id),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 180),
-                          style: LoTheme.font(
-                            size: 16,
-                            weight: FontWeight.w600,
-                            color: dim ? LoTheme.ink3 : LoTheme.ink,
-                            decoration: item.checked ? TextDecoration.lineThrough : TextDecoration.none,
-                            decorationColor: LoTheme.primary,
-                          ),
-                          child: Text(item.name),
-                        ),
-                      ),
-                      if (inStock) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: LoTheme.primarySoft,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.inventory_2_rounded, size: 10, color: LoTheme.primaryPress),
-                              const SizedBox(width: 3),
-                              Text(
-                                isFr ? 'En stock' : 'In stock',
-                                style: LoTheme.font(size: 10, weight: FontWeight.w700, color: LoTheme.primaryPress),
+                  LoCheckbox(checked: item.checked, onToggle: () => store.toggleItem(list.id, block.id, item.id)),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: AnimatedDefaultTextStyle(
+                                duration: const Duration(milliseconds: 180),
+                                style: LoTheme.font(
+                                  size: 16,
+                                  weight: FontWeight.w600,
+                                  color: dim ? LoTheme.ink3 : LoTheme.ink,
+                                  decoration: item.checked ? TextDecoration.lineThrough : TextDecoration.none,
+                                  decorationColor: LoTheme.primary,
+                                ),
+                                child: Text(item.name),
+                              ),
+                            ),
+                            if (inStock) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: LoTheme.primarySoft,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.inventory_2_rounded, size: 10, color: LoTheme.primaryPress),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      isFr ? 'En stock' : 'In stock',
+                                      style: LoTheme.font(size: 10, weight: FontWeight.w700, color: LoTheme.primaryPress),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
-                          ),
+                          ],
                         ),
+                        if (subtractionLabel.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            subtractionLabel,
+                            style: LoTheme.font(
+                              size: 12,
+                              weight: FontWeight.w600,
+                              color: LoTheme.ink3,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                  if (subtractionLabel.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      subtractionLabel,
-                      style: LoTheme.font(
-                        size: 12,
-                        weight: FontWeight.w600,
-                        color: LoTheme.ink3,
-                      ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
           ),
+          const SizedBox(width: 12),
           Pressable(
             scale: 0.9,
             onTap: () => openEditItem(context, list.id, block.id, item),
@@ -654,6 +682,7 @@ class _LooseBlock extends StatelessWidget {
       'Boucherie & Poissonnerie',
       'Épicerie',
       'Boissons',
+      'Hygiène & Entretien',
       'En vrac',
     ];
 
@@ -762,71 +791,78 @@ class _ConsolidatedItemRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 9),
         child: Row(children: [
-          LoCheckbox(
-            checked: ci.checked,
-            onToggle: () => store.toggleConsolidatedItem(list.id, itemIds, !ci.checked),
-          ),
-          const SizedBox(width: 13),
           Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => store.toggleConsolidatedItem(list.id, itemIds, !ci.checked),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 180),
-                          style: LoTheme.font(
-                            size: 16.0,
-                            weight: FontWeight.w600,
-                            color: dim ? LoTheme.ink3 : LoTheme.ink,
-                            decoration: ci.checked ? TextDecoration.lineThrough : TextDecoration.none,
-                            decorationColor: LoTheme.primary,
-                          ),
-                          child: Text(ci.name),
-                        ),
-                      ),
-                      if (inStock) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: LoTheme.primarySoft,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.inventory_2_rounded, size: 10, color: LoTheme.primaryPress),
-                              const SizedBox(width: 3),
-                              Text(
-                                isFr ? 'En stock' : 'In stock',
-                                style: LoTheme.font(size: 10, weight: FontWeight.w700, color: LoTheme.primaryPress),
+                  LoCheckbox(
+                    checked: ci.checked,
+                    onToggle: () => store.toggleConsolidatedItem(list.id, itemIds, !ci.checked),
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: AnimatedDefaultTextStyle(
+                                duration: const Duration(milliseconds: 180),
+                                style: LoTheme.font(
+                                  size: 16.0,
+                                  weight: FontWeight.w600,
+                                  color: dim ? LoTheme.ink3 : LoTheme.ink,
+                                  decoration: ci.checked ? TextDecoration.lineThrough : TextDecoration.none,
+                                  decorationColor: LoTheme.primary,
+                                ),
+                                child: Text(ci.name),
+                              ),
+                            ),
+                            if (inStock) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: LoTheme.primarySoft,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.inventory_2_rounded, size: 10, color: LoTheme.primaryPress),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      isFr ? 'En stock' : 'In stock',
+                                      style: LoTheme.font(size: 10, weight: FontWeight.w700, color: LoTheme.primaryPress),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitleLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: LoTheme.font(
+                            size: 12,
+                            weight: FontWeight.w600,
+                            color: LoTheme.ink3,
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitleLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: LoTheme.font(
-                      size: 12,
-                      weight: FontWeight.w600,
-                      color: LoTheme.ink3,
                     ),
                   ),
                 ],
               ),
             ),
           ),
+          const SizedBox(width: 12),
           Pressable(
             scale: 0.9,
             onTap: () => openEditConsolidatedItem(context, list.id, ci),
@@ -853,6 +889,8 @@ IconData _getCategoryIcon(String cat) {
       return Icons.dinner_dining_rounded;
     case 'Boissons':
       return Icons.local_cafe_rounded;
+    case 'Hygiène & Entretien':
+      return Icons.clean_hands_rounded;
     default:
       return AppIcons.shoppingCart;
   }

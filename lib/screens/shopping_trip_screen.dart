@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../data/store.dart';
 import '../models/models.dart';
-import '../models/unit.dart';
 import '../theme/app_theme.dart';
 import '../theme/icons.dart';
 import '../l10n/l10n.dart';
@@ -125,6 +124,8 @@ class _ShoppingTripScreenState extends State<ShoppingTripScreen> {
         return Icons.dinner_dining_rounded;
       case 'Boissons':
         return Icons.local_cafe_rounded;
+      case 'Hygiène & Entretien':
+        return Icons.clean_hands_rounded;
       default:
         return AppIcons.shoppingCart;
     }
@@ -166,6 +167,7 @@ class _ShoppingTripScreenState extends State<ShoppingTripScreen> {
       'Boucherie & Poissonnerie',
       'Épicerie',
       'Boissons',
+      'Hygiène & Entretien',
       'En vrac',
     ];
 
@@ -184,8 +186,9 @@ class _ShoppingTripScreenState extends State<ShoppingTripScreen> {
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
-        systemNavigationBarColor: LoTheme.surface,
+        systemNavigationBarColor: Colors.transparent,
         systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarContrastEnforced: false,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(

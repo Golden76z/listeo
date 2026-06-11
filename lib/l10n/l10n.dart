@@ -22,6 +22,8 @@ extension LocalizationExtension on BuildContext {
         return t('cat.grocery');
       case 'Boissons':
         return t('cat.drinks');
+      case 'Hygiène & Entretien':
+        return t('cat.cleaning');
       default:
         return t('cat.bulk');
     }
@@ -153,6 +155,7 @@ const Map<String, Map<String, String>> kTranslations = {
     'cat.meat': 'Boucherie & Poissonnerie',
     'cat.grocery': 'Épicerie',
     'cat.drinks': 'Boissons',
+    'cat.cleaning': 'Hygiène & Entretien',
     'cat.bulk': 'En vrac',
     'filter.all': 'Tout',
     'filter.pasta': 'Pâtes',
@@ -301,6 +304,7 @@ const Map<String, Map<String, String>> kTranslations = {
     'cat.meat': 'Meat & Seafood',
     'cat.grocery': 'Pantry',
     'cat.drinks': 'Beverages',
+    'cat.cleaning': 'Hygiene & Care',
     'cat.bulk': 'Bulk',
     'filter.all': 'All',
     'filter.pasta': 'Pasta',

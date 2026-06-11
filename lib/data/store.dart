@@ -550,7 +550,11 @@ class AppStore extends ChangeNotifier {
   void toggleInventoryItemStock(String id) {
     final idx = inventory.indexWhere((it) => it.id == id);
     if (idx != -1) {
-      inventory[idx].inStock = !inventory[idx].inStock;
+      final newInStock = !inventory[idx].inStock;
+      inventory[idx].inStock = newInStock;
+      if (newInStock && inventory[idx].qty <= 0) {
+        inventory[idx].qty = 1.0;
+      }
       _changed();
     }
   }
@@ -563,9 +567,21 @@ class AppStore extends ChangeNotifier {
     final idx = inventory.indexWhere((it) => it.id == id);
     if (idx != -1) {
       if (name != null && name.trim().isNotEmpty) inventory[idx].name = name.trim();
-      if (qty != null) inventory[idx].qty = qty;
+      if (qty != null) {
+        inventory[idx].qty = qty;
+        if (qty <= 0) {
+          inventory[idx].inStock = false;
+        } else if (qty > 0 && !inventory[idx].inStock) {
+          inventory[idx].inStock = true;
+        }
+      }
       if (unit != null) inventory[idx].unit = unit;
-      if (inStock != null) inventory[idx].inStock = inStock;
+      if (inStock != null) {
+        inventory[idx].inStock = inStock;
+        if (inStock && inventory[idx].qty <= 0) {
+          inventory[idx].qty = 1.0;
+        }
+      }
       _changed();
     }
   }
@@ -617,7 +633,7 @@ class AppStore extends ChangeNotifier {
       if (unitMatches) {
         final displayQty = (neededQty - invItem.qty).clamp(0.0, double.infinity);
         if (displayQty == 0.0) {
-          return InventoryDeduction(
+          return const InventoryDeduction(
             displayQty: 0.0,
             inStock: true,
             subtractionLabel: '',

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Listeo — Privacy Policy / Politique de confidentialité</title>
+  
+  <!-- Modern Google Font: Quicksand -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ── Listeo Design Tokens & Theme Variables ── */
+    :root {
+      --primary: #388C5A;
+      --primary-soft: #E9F4EE;
+      --primary-press: #2B6B44;
+      --accent: #F5D90A;
+      --accent-ink: #B49E06;
+      --bg: #F5F9F6;
+      --surface: #FFFFFF;
+      --surface2: #E9F2ED;
+      --line: #DEEAE3;
+      --line-strong: #C9DBD0;
+      --ink: #1E3A27;
+      --ink2: #526659;
+      --ink3: #8BA093;
+      --radius: 10px;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --fast: 150ms;
+      --med: 280ms;
+      --shadow: 0 1px 3px rgba(40, 46, 32, 0.05), 0 6px 18px rgba(40, 46, 32, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Quicksand', sans-serif;
+      background-color: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 40px 20px;
+      line-height: 1.6;
+      font-weight: 500;
+    }
+
+    /* ── Header Styling ── */
+    header {
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      background-color: var(--primary);
+      border-radius: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(56, 140, 90, 0.25);
+    }
+
+    /* Beautiful vector grocery list icon */
+    .logo-container svg {
+      width: 36px;
+      height: 36px;
+      fill: none;
+      stroke: var(--surface);
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .effective-date {
+      font-size: 14px;
+      color: var(--ink2);
+      font-weight: 600;
+    }
+
+    /* ── Language Switcher Toggle ── */
+    .toggle-container {
+      background-color: var(--line);
+      padding: 4px;
+      border-radius: 30px;
+      display: inline-flex;
+      position: relative;
+      margin: 20px 0;
+      width: 220px;
+      height: 44px;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .toggle-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--ink2);
+      cursor: pointer;
+      z-index: 2;
+      border-radius: 26px;
+      transition: color var(--fast) var(--ease);
+      outline: none;
+    }
+
+    .toggle-btn.active {
+      color: var(--ink);
+    }
+
+    .toggle-slider {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 104px;
+      height: 36px;
+      background-color: var(--surface);
+      border-radius: 26px;
+      z-index: 1;
+      transition: transform var(--med) var(--ease);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Toggle Slide Animation */
+    .toggle-container.fr-active .toggle-slider {
+      transform: translateX(108px);
+    }
+
+    /* ── Main Content Card ── */
+    main {
+      width: 100%;
+      max-width: 680px;
+      background-color: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      transition: transform var(--med) var(--ease);
+    }
+
+    .content-wrapper {
+      padding: 40px;
+      position: relative;
+      min-height: 400px;
+    }
+
+    .lang-section {
+      display: none;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity var(--med) var(--ease), transform var(--med) var(--ease);
+    }
+
+    .lang-section.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ── Typography & Inside-Card Layout ── */
+    p.intro-text {
+      font-size: 18px;
+      color: var(--ink);
+      font-weight: 600;
+      margin-bottom: 24px;
+      border-left: 4px solid var(--primary);
+      padding-left: 16px;
+    }
+
+    h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 28px;
+      margin-bottom: 8px;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+    }
+
+    h3::before {
+      content: "";
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background-color: var(--primary);
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    p.body-text {
+      font-size: 15px;
+      color: var(--ink2);
+      margin-bottom: 16px;
+    }
+
+    /* Highlight box for 'None' / 'Aucune' data */
+    .highlight-card {
+      background-color: var(--primary-soft);
+      border: 1px solid var(--line-strong);
+      padding: 16px;
+      border-radius: var(--radius);
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 16px;
+    }
+
+    /* ── Button Link / Contact ── */
+    .contact-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--primary);
+      color: var(--surface);
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 15px;
+      margin-top: 10px;
+      transition: background-color var(--fast) var(--ease), transform var(--fast) var(--ease);
+      box-shadow: 0 4px 10px rgba(56, 140, 90, 0.15);
+    }
+
+    .contact-btn:hover {
+      background-color: var(--primary-press);
+      transform: translateY(-1px);
+    }
+
+    .contact-btn:active {
+      transform: translateY(0);
+    }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--ink3);
+      font-weight: 600;
+    }
+
+    footer a {
+      color: var(--ink2);
+      text-decoration: none;
+      border-bottom: 1.5px solid var(--line-strong);
+      transition: color var(--fast) var(--ease);
+    }
+
+    footer a:hover {
+      color: var(--primary);
+    }
+
+    /* ── Responsive Scaling ── */
+    @media (max-width: 600px) {
+      body {
+        padding: 24px 16px;
+      }
+      .content-wrapper {
+        padding: 24px;
+      }
+      h1 {
+        font-size: 22px;
+      }
+      p.intro-text {
+        font-size: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <!-- Checklist / Sheet icon with Checkmark -->
+        <path d="M9 11l3 3L22 4" />
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+      </svg>
+    </div>
+    <h1>Listeo</h1>
+    <div class="effective-date" id="date-label">Effective date: 15 June 2026</div>
+
+    <!-- Switcher Toggle -->
+    <div class="toggle-container" id="toggle-container">
+      <button class="toggle-btn active" id="btn-en" onclick="setLanguage('en')">English</button>
+      <button class="toggle-btn" id="btn-fr" onclick="setLanguage('fr')">Français</button>
+      <div class="toggle-slider"></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="content-wrapper">
+      
+      <!-- ENGLISH SECTION -->
+      <section id="section-en" class="lang-section active">
+        <p class="intro-text">
+          Listeo ("the app") is a grocery-list application. This policy explains how the app handles your information. In short: <strong>Listeo does not collect, transmit, or share any personal data.</strong>
+        </p>
+
+        <h3>Data we collect</h3>
+        <div class="highlight-card">
+          None. Listeo has no user accounts, no sign-in, and no servers. We do not collect personal information of any kind.
+        </div>
+
+        <h3>Data stored on your device</h3>
+        <p class="body-text">
+          The lists, recipes, and preferences you create are stored <strong>locally on your device only</strong>, using the device's standard local storage. This data never leaves your device and is not accessible to us or any third party. If you delete the app, this data is removed with it.
+        </p>
+
+        <h3>Third parties</h3>
+        <p class="body-text">
+          Listeo contains no third-party analytics, advertising, tracking, or crash-reporting SDKs. No data is sent to any third party.
+        </p>
+
+        <h3>Network access</h3>
+        <p class="body-text">
+          Listeo works fully offline. It does not require an internet connection to function.
+        </p>
+
+        <h3>Children's privacy</h3>
+        <p class="body-text">
+          Listeo does not knowingly collect any data from anyone, including children.
+        </p>
+
+        <h3>Changes to this policy</h3>
+        <p class="body-text">
+          If this policy changes, the updated version will be posted at this URL with a new effective date.
+        </p>
+
+        <h3>Contact</h3>
+        <p class="body-text">Questions?</p>
+        <a href="mailto:dap@csmrouen.com" class="contact-btn">Email dap@csmrouen.com</a>
+      </section>
+
+      <!-- FRENCH SECTION -->
+      <section id="section-fr" class="lang-section">
+        <p class="intro-text">
+          Listeo (« l'application ») est une application de listes de courses. Cette politique explique comment l'application traite vos informations. En résumé : <strong>Listeo ne collecte, ne transmet et ne partage aucune donnée personnelle.</strong>
+        </p>
+
+        <h3>Données collectées</h3>
+        <div class="highlight-card">
+          Aucune. Listeo ne propose pas de compte utilisateur, pas de connexion et n'utilise aucun serveur. Nous ne collectons aucune information personnelle.
+        </div>
+
+        <h3>Données stockées sur votre appareil</h3>
+        <p class="body-text">
+          Les listes, recettes et préférences que vous créez sont enregistrées <strong>uniquement en local sur votre appareil</strong>, via le stockage local standard de l'appareil. Ces données ne quittent jamais votre appareil et ne sont accessibles ni à nous ni à un tiers. Si vous supprimez l'application, ces données sont supprimées avec elle.
+        </p>
+
+        <h3>Tiers</h3>
+        <p class="body-text">
+          Listeo ne contient aucun SDK tiers d'analyse, de publicité, de suivi ou de rapport de plantage. Aucune donnée n'est envoyée à un tiers.
+        </p>
+
+        <h3>Accès réseau</h3>
+        <p class="body-text">
+          Listeo fonctionne entièrement hors ligne. Aucune connexion internet n'est nécessaire à son fonctionnement.
+        </p>
+
+        <h3>Confidentialité des enfants</h3>
+        <p class="body-text">
+          Listeo ne collecte sciemment aucune donnée de quiconque, y compris des enfants.
+        </p>
+
+        <h3>Modifications de cette politique</h3>
+        <p class="body-text">
+          En cas de modification, la version mise à jour sera publiée à cette adresse avec une nouvelle date d'entrée en vigueur.
+        </p>
+
+        <h3>Contact</h3>
+        <p class="body-text">Une question ?</p>
+        <a href="mailto:damienprouet76@gmail.com" class="contact-btn">Contacter damienprouet76@gmail.com</a>
+      </section>
+
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Listeo. <a href="https://github.com/Golden76z/listeo" target="_blank" rel="noopener">GitHub Project</a></p>
+  </footer>
+
+  <script>
+    function setLanguage(lang) {
+      const isEn = lang === 'en';
+      
+      // Update toggle button states
+      document.getElementById('btn-en').classList.toggle('active', isEn);
+      document.getElementById('btn-fr').classList.toggle('active', !isEn);
+      
+      // Animating the slider position via class on container
+      const container = document.getElementById('toggle-container');
+      if (isEn) {
+        container.classList.remove('fr-active');
+      } else {
+        container.classList.add('fr-active');
+      }
+
+      // Update date label format
+      const dateLabel = document.getElementById('date-label');
+      if (isEn) {
+        dateLabel.textContent = 'Effective date: 15 June 2026';
+      } else {
+        dateLabel.textContent = "Date d'entrée en vigueur : 15 Juin 2026";
+      }
+
+      // Hide active section and show new section with smooth entry
+      const activeSection = document.querySelector('.lang-section.active');
+      const targetSection = document.getElementById('section-' + lang);
+
+      if (activeSection !== targetSection) {
+        activeSection.classList.remove('active');
+        
+        // Short timeout for display: none replacement before opacity fade in
+        setTimeout(() => {
+          targetSection.classList.add('active');
+        }, 50);
+      }
+    }
+  </script>
+</body>
+</html>

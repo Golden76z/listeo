@@ -14,16 +14,15 @@ Two tabs, swipeable left↔right: **Listes** (your shopping lists) and **Recette
 
 ## Getting started
 
-This repo contains the Dart source (`lib/`), `pubspec.yaml`, and analysis config. The platform runner folders (`android/`, `ios/`, …) are not committed, so generate them once:
+This repo contains the Dart source (`lib/`), `pubspec.yaml`, analysis config, and the platform runner folders (`android/`, `ios/`, …). To run:
 
 ```bash
 cd listeo
-flutter create .          # adds android/ios/etc — keeps lib/ and pubspec.yaml
 flutter pub get
 flutter run
 ```
 
-Requires Flutter 3.19+ (Dart SDK ≥ 3.3). First launch fetches the **Quicksand** font via `google_fonts` (needs network once; it then caches). To ship fully offline, drop the Quicksand `.ttf` files into `assets/fonts/`, declare them in `pubspec.yaml`, and swap the `GoogleFonts.quicksand(...)` calls in `lib/theme/app_theme.dart` for a bundled family.
+Requires Flutter 3.19+ (Dart SDK ≥ 3.3). The **Quicksand** font is bundled in `assets/fonts/` and declared in `pubspec.yaml`, so the app runs fully offline — no network is required at any point.
 
 ## Architecture
 

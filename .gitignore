@@ -7,6 +7,11 @@
 .buildlog/
 .history
 
+# Dev scratch artifacts (not part of the app)
+/scratch/
+/scratch_keys.json
+/screenshot_*.png
+
 
 
 # Flutter repo-specific

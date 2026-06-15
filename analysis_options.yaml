@@ -5,6 +5,6 @@ linter:
     prefer_const_constructors: true
     prefer_const_literals_to_create_immutables: true
 
-analyzer:
-  errors:
-    use_build_context_synchronously: ignore
+# NOTE: use_build_context_synchronously is intentionally NOT ignored anymore.
+# It flags using a BuildContext after an `await` (a real crash risk). Run
+# `flutter analyze` and fix any warnings by guarding with `if (!context.mounted) return;`.

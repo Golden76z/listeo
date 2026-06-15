@@ -8,6 +8,10 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Portrait-only: the UI is designed for a single portrait column.
+  await SystemChrome.setPreferredOrientations(const [
+    DeviceOrientation.portraitUp,
+  ]);
   // Draw behind the system bars so the bottom nav's surface shows through the
   // Android navigation-bar area (no jarring color mismatch).
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

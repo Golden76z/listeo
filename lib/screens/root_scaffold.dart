@@ -39,6 +39,13 @@ class _RootScaffoldState extends State<RootScaffold> {
   }
 
   void _goTo(int i) {
+    if (_controller.hasClients) {
+      final cur = _controller.page?.round() ?? 0;
+      if ((cur - i).abs() > 1) {
+        _controller.jumpToPage(i);
+        return;
+      }
+    }
     _controller.animateToPage(i, duration: LoTheme.med, curve: LoTheme.ease);
   }
 
